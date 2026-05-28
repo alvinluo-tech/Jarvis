@@ -1,0 +1,26 @@
+{
+  "name": "jarvis",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Jarvis Personal Command Center",
+  "scripts": {
+    "dev": "concurrently \"pnpm --filter daemon dev\" \"pnpm --filter frontend tauri dev\"",
+    "dev:web": "pnpm --filter frontend dev",
+    "dev:daemon": "pnpm --filter daemon dev",
+    "build": "pnpm --filter daemon build && pnpm --filter frontend tauri build",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "clean": "pnpm -r clean"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["better-sqlite3", "esbuild"]
+  }
+}
