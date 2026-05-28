@@ -1,24 +1,21 @@
-import type { ToolDefinition } from "../orchestrator/ai-client.js";
+import type { Tool } from "ai";
 
-export type ToolHandler = (args: Record<string, unknown>) => Promise<unknown>;
+const tools = new Map<string, Tool>();
 
-interface RegisteredTool {
-  definition: ToolDefinition;
-  handler: ToolHandler;
+export function registerTool(name: string, toolDef: Tool): void {
+  tools.set(name, toolDef);
 }
 
-const tools = new Map<string, RegisteredTool>();
-
-export function registerTool(definition: ToolDefinition, handler: ToolHandler): void {
-  tools.set(definition.function.name, { definition, handler });
-}
-
-export function getTool(name: string): RegisteredTool | undefined {
+export function getTool(name: string): Tool | undefined {
   return tools.get(name);
 }
 
-export function getAllToolDefinitions(): ToolDefinition[] {
-  return Array.from(tools.values()).map((t) => t.definition);
+export function getAllTools(): Record<string, Tool> {
+  const result: Record<string, Tool> = {};
+  for (const [name, tool] of tools) {
+    result[name] = tool;
+  }
+  return result;
 }
 
 export function getAllToolNames(): string[] {

@@ -8,12 +8,13 @@ import { getStorageMode } from "./config/storage-config.js";
 import { registerTodoTools } from "./tools/todo/connector.js";
 import { registerReadingTools } from "./tools/reading/connector.js";
 import { registerReviewTools } from "./tools/review/connector.js";
-import { handleMessage } from "./orchestrator/conversation.js";
 import conversationRoutes from "./api/conversations.js";
 import taskRoutes from "./api/tasks.js";
 import articleRoutes from "./api/articles.js";
 import reviewRoutes from "./api/reviews.js";
 import settingsRoutes from "./api/settings.js";
+import chatRoutes from "./api/chat.js";
+import voiceRoutes from "./api/voice.js";
 
 // Initialize storage mode and repositories
 const storageMode = getStorageMode();
@@ -33,8 +34,13 @@ app.get("/health", (c) => {
     status: "ok",
     timestamp: new Date().toISOString(),
     storageMode: getCurrentMode(),
+    aiProvider: env.AI_PROVIDER,
+    aiModel: env.AI_MODEL,
   });
 });
+
+// Chat routes (streaming + non-streaming)
+app.route("/api/chat", chatRoutes);
 
 // Conversation management routes
 app.route("/api/conversations", conversationRoutes);
@@ -47,19 +53,8 @@ app.route("/api/reviews", reviewRoutes);
 // Settings routes
 app.route("/api/settings", settingsRoutes);
 
-app.post("/api/chat", async (c) => {
-  try {
-    const body = await c.req.json<{ message: string }>();
-    if (!body.message?.trim()) {
-      return c.json({ error: "消息不能为空" }, 400);
-    }
-    const result = await handleMessage(body.message);
-    return c.json(result);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return c.json({ error: message }, 500);
-  }
-});
+// Voice routes (ASR/TTS)
+app.route("/api/voice", voiceRoutes);
 
 function startServer(port: number) {
   try {
@@ -81,10 +76,10 @@ function startServer(port: number) {
 }
 
 // Show configuration on startup
-const aiMode = env.MIMO_API_KEY ? "AI 模式 (MiMo API)" : "本地模式 (无 API Key)";
-console.log(`[Jarvis] AI 模式: ${aiMode}`);
-console.log(`[Jarvis] API URL: ${env.MIMO_API_URL}`);
-console.log(`[Jarvis] 存储模式: ${getCurrentMode()}`);
+const aiConfigured = Boolean(env.MIMO_API_KEY || env.GROQ_API_KEY || env.OPENROUTER_API_KEY);
+const aiMode = aiConfigured ? `AI 模式 (${env.AI_PROVIDER}/${env.AI_MODEL})` : "本地模式 (无 API Key)";
+console.log(`[Jarvis] AI: ${aiMode}`);
+console.log(`[Jarvis] 存储: ${getCurrentMode()}`);
 console.log(`[Jarvis] 数据库: ${env.SQLITE_DB_PATH}`);
 
 startServer(env.DAEMON_PORT);

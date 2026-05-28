@@ -1,104 +1,56 @@
+import { tool } from "ai";
+import { z } from "zod";
 import { getRepositories } from "../../db/factory.js";
 import { registerTool } from "../registry.js";
-import {
-  getDailySummarySchema,
-  getWeeklyStatsSchema,
-  saveReviewSchema,
-  getReviewHistorySchema,
-} from "./schema.js";
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 export function registerReviewTools(): void {
-  // getDailySummary
-  registerTool(
-    {
-      type: "function",
-      function: {
-        name: "getDailySummary",
-        description: "获取指定日期的任务完成情况汇总。默认今日。",
-        parameters: {
-          type: "object",
-          properties: {
-            date: { type: "string", description: "日期 YYYY-MM-DD，默认今日" },
-          },
-        },
-      },
-    },
-    async (args) => {
-      const input = getDailySummarySchema.parse(args);
-      const result = await getRepositories().reviews.getDailySummary(input.date);
+  registerTool("getDailySummary", tool({
+    description: "获取指定日期的任务完成情况汇总。默认今日。",
+    parameters: z.object({
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe("日期 YYYY-MM-DD，默认今日"),
+    }),
+    execute: async (args: any) => {
+      const result = await getRepositories().reviews.getDailySummary(args.date);
       return result;
     },
-  );
+  } as any));
 
-  // getWeeklyStats
-  registerTool(
-    {
-      type: "function",
-      function: {
-        name: "getWeeklyStats",
-        description: "获取本周统计数据。包含每日分解、阅读量、高频标签。",
-        parameters: {
-          type: "object",
-          properties: {
-            weekStart: { type: "string", description: "周一日期 YYYY-MM-DD" },
-          },
-        },
-      },
-    },
-    async (args) => {
-      const input = getWeeklyStatsSchema.parse(args);
-      const result = await getRepositories().reviews.getWeeklyStats(input.weekStart);
+  registerTool("getWeeklyStats", tool({
+    description: "获取本周统计数据。包含每日分解、阅读量、高频标签。",
+    parameters: z.object({
+      weekStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe("周一日期 YYYY-MM-DD"),
+    }),
+    execute: async (args: any) => {
+      const result = await getRepositories().reviews.getWeeklyStats(args.weekStart);
       return result;
     },
-  );
+  } as any));
 
-  // saveReview
-  registerTool(
-    {
-      type: "function",
-      function: {
-        name: "saveReview",
-        description: "保存 AI 生成的回顾记录。",
-        parameters: {
-          type: "object",
-          properties: {
-            type: { type: "string", enum: ["daily", "weekly"] },
-            summary: { type: "string", description: "AI 生成的总结" },
-            patterns: { type: "array", items: { type: "string" }, description: "识别的模式" },
-            suggestions: { type: "array", items: { type: "string" }, description: "改进建议" },
-          },
-          required: ["type", "summary", "patterns"],
-        },
-      },
-    },
-    async (args) => {
-      const input = saveReviewSchema.parse(args);
-      const review = await getRepositories().reviews.save(input);
+  registerTool("saveReview", tool({
+    description: "保存 AI 生成的回顾记录。",
+    parameters: z.object({
+      type: z.enum(["daily", "weekly"]),
+      summary: z.string().describe("AI 生成的总结"),
+      patterns: z.array(z.string()).describe("识别的模式"),
+      suggestions: z.array(z.string()).describe("改进建议"),
+    }),
+    execute: async (args: any) => {
+      const review = await getRepositories().reviews.save(args);
       return { review };
     },
-  );
+  } as any));
 
-  // getReviewHistory
-  registerTool(
-    {
-      type: "function",
-      function: {
-        name: "getReviewHistory",
-        description: "获取历史回顾记录。",
-        parameters: {
-          type: "object",
-          properties: {
-            type: { type: "string", enum: ["daily", "weekly"] },
-            limit: { type: "number", description: "返回数量" },
-          },
-          required: ["type"],
-        },
-      },
-    },
-    async (args) => {
-      const input = getReviewHistorySchema.parse(args);
-      const reviews = await getRepositories().reviews.getHistory(input.type, input.limit);
+  registerTool("getReviewHistory", tool({
+    description: "获取历史回顾记录。",
+    parameters: z.object({
+      type: z.enum(["daily", "weekly"]),
+      limit: z.number().int().min(1).max(50).default(10).describe("返回数量"),
+    }),
+    execute: async (args: any) => {
+      const reviews = await getRepositories().reviews.getHistory(args.type, args.limit);
       return { reviews };
     },
-  );
+  } as any));
 }

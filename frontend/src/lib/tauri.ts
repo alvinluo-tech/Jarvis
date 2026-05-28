@@ -203,3 +203,25 @@ export async function updateStorageMode(mode: string): Promise<{
 }> {
   return invoke("update_storage_mode", { mode });
 }
+
+// ---- Voice ----
+
+export interface VoiceStatus {
+  asr: boolean;
+  tts: { available: boolean; provider: string };
+  vad: { available: boolean; note: string };
+}
+
+export async function getVoiceStatus(): Promise<VoiceStatus> {
+  return invoke("get_voice_status");
+}
+
+export async function getHealth(): Promise<{
+  status: string;
+  timestamp: string;
+  storageMode: string;
+  aiProvider: string;
+  aiModel: string;
+}> {
+  return invoke("get_health");
+}

@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { ConversationList } from "@/components/chat/ConversationList";
 import { TodayView } from "@/components/modules/todo/TodayView";
@@ -6,8 +6,10 @@ import { ReadingList } from "@/components/modules/reading/ReadingList";
 import { DailySummary } from "@/components/modules/review/DailySummary";
 import { VoicePanel } from "@/components/voice/VoicePanel";
 import { SettingsModal } from "@/components/settings/SettingsModal";
+import { CommandPalette } from "@/components/palette/CommandPalette";
 import { useChat } from "@/hooks/useChat";
 import { useVoice } from "@/hooks/useVoice";
+import { usePaletteStore } from "@/stores/paletteStore";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Settings } from "lucide-react";
@@ -15,6 +17,20 @@ import { Settings } from "lucide-react";
 function App() {
   const { messages, sendMessage, isLoading, activeConversationId } = useChat();
   const [showSettings, setShowSettings] = useState(false);
+  const paletteToggle = usePaletteStore((s) => s.toggle);
+
+  // Global keyboard shortcut: Alt+Space to toggle command palette
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.altKey && e.code === "Space") {
+        e.preventDefault();
+        paletteToggle();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [paletteToggle]);
 
   const handleVoiceCommand = useCallback(
     (text: string) => {
@@ -30,6 +46,19 @@ function App() {
   if (lastMessage?.role === "assistant" && voice.state === "processing") {
     voice.speak(lastMessage.content);
   }
+
+  const handlePaletteChat = useCallback(
+    (text: string) => {
+      sendMessage(text);
+    },
+    [sendMessage],
+  );
+
+  const handlePaletteNavigate = useCallback((view: string) => {
+    if (view === "new-chat") {
+      // Will be handled by conversation store
+    }
+  }, []);
 
   return (
     <div className="flex h-screen bg-background">
@@ -83,6 +112,14 @@ function App() {
           hasActiveConversation={!!activeConversationId}
         />
       </main>
+
+      {/* Command Palette (Alt+Space) */}
+      <CommandPalette
+        onChat={handlePaletteChat}
+        onNavigate={handlePaletteNavigate}
+        onVoiceToggle={voice.toggleListening}
+        onOpenSettings={() => setShowSettings(true)}
+      />
 
       {/* Settings Modal */}
       <SettingsModal open={showSettings} onClose={() => setShowSettings(false)} />

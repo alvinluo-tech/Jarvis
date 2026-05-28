@@ -1,115 +1,69 @@
+import { tool } from "ai";
+import { z } from "zod";
 import { getRepositories } from "../../db/factory.js";
 import { registerTool } from "../registry.js";
-import {
-  addArticleSchema,
-  getReadingListSchema,
-  updateReadingStatusSchema,
-  getReadingStatsSchema,
-} from "./schema.js";
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 export function registerReadingTools(): void {
-  // addArticle
-  registerTool(
-    {
-      type: "function",
-      function: {
-        name: "addArticle",
-        description: "添加文章到阅读清单。可指定 URL、标题、分类。",
-        parameters: {
-          type: "object",
-          properties: {
-            url: { type: "string", description: "文章 URL" },
-            title: { type: "string", description: "文章标题" },
-            category: { type: "string", description: "分类" },
-            description: { type: "string", description: "文章描述" },
-          },
-          required: ["title"],
-        },
-      },
-    },
-    async (args) => {
-      const input = addArticleSchema.parse(args);
-      const article = await getRepositories().articles.create(input);
+  registerTool("addArticle", tool({
+    description: "添加文章到阅读清单。可指定 URL、标题、分类。",
+    parameters: z.object({
+      url: z.string().url().optional().describe("文章 URL"),
+      title: z.string().min(1).describe("文章标题"),
+      category: z.string().optional().describe("分类"),
+      description: z.string().optional().describe("文章描述"),
+    }),
+    execute: async (args: any) => {
+      const article = await getRepositories().articles.create(args);
       return { article };
     },
-  );
+  } as any));
 
-  // getReadingList
-  registerTool(
-    {
-      type: "function",
-      function: {
-        name: "getReadingList",
-        description: "获取阅读清单。可按状态、分类筛选。",
-        parameters: {
-          type: "object",
-          properties: {
-            status: { type: "string", enum: ["unread", "reading", "finished"] },
-            category: { type: "string" },
-            limit: { type: "number", description: "返回数量上限" },
-          },
-        },
-      },
-    },
-    async (args) => {
-      const input = getReadingListSchema.parse(args);
-      const articles = await getRepositories().articles.list(input);
+  registerTool("getReadingList", tool({
+    description: "获取阅读清单。可按状态、分类筛选。",
+    parameters: z.object({
+      status: z.enum(["unread", "reading", "finished"]).optional(),
+      category: z.string().optional(),
+      limit: z.number().int().min(1).max(100).default(20).describe("返回数量上限"),
+    }),
+    execute: async (args: any) => {
+      const articles = await getRepositories().articles.list(args);
       return { articles, count: articles.length };
     },
-  );
+  } as any));
 
-  // updateReadingStatus
-  registerTool(
-    {
-      type: "function",
-      function: {
-        name: "updateReadingStatus",
-        description: "更新文章阅读状态。可设置评分和笔记。",
-        parameters: {
-          type: "object",
-          properties: {
-            articleId: { type: "string", description: "文章 ID" },
-            status: { type: "string", enum: ["unread", "reading", "finished"] },
-            rating: { type: "number", description: "评分 1-5" },
-            notes: { type: "string", description: "笔记" },
-          },
-          required: ["articleId", "status"],
-        },
-      },
-    },
-    async (args) => {
-      const input = updateReadingStatusSchema.parse(args);
-      const article = await getRepositories().articles.update(input.articleId, input);
+  registerTool("updateReadingStatus", tool({
+    description: "更新文章阅读状态。可设置评分和笔记。",
+    parameters: z.object({
+      articleId: z.string().min(1).describe("文章 ID"),
+      status: z.enum(["unread", "reading", "finished"]),
+      rating: z.number().int().min(1).max(5).optional().describe("评分 1-5"),
+      notes: z.string().optional().describe("笔记"),
+    }),
+    execute: async (args: any) => {
+      const { articleId, ...data } = args;
+      const article = await getRepositories().articles.update(articleId, data);
       return { article };
     },
-  );
+  } as any));
 
-  // getReadingStats
-  registerTool(
-    {
-      type: "function",
-      function: {
-        name: "getReadingStats",
-        description: "获取阅读统计数据。",
-        parameters: {
-          type: "object",
-          properties: {
-            period: { type: "string", enum: ["week", "month", "all"] },
-          },
-        },
-      },
-    },
-    async (args) => {
-      const input = getReadingStatsSchema.parse(args);
+  registerTool("getReadingStats", tool({
+    description: "获取阅读统计数据。",
+    parameters: z.object({
+      period: z.enum(["week", "month", "all"]).default("all"),
+    }),
+    execute: async (args: any) => {
+      const { period } = args;
       const allArticles = await getRepositories().articles.list();
 
       let filteredArticles = allArticles;
-      if (input.period !== "all") {
+      if (period !== "all") {
         const now = new Date();
         const cutoff = new Date();
-        if (input.period === "week") {
+        if (period === "week") {
           cutoff.setDate(now.getDate() - 7);
-        } else if (input.period === "month") {
+        } else if (period === "month") {
           cutoff.setMonth(now.getMonth() - 1);
         }
         const cutoffStr = cutoff.toISOString();
@@ -131,19 +85,12 @@ export function registerReadingTools(): void {
 
       return stats;
     },
-  );
+  } as any));
 
-  // recommendNext
-  registerTool(
-    {
-      type: "function",
-      function: {
-        name: "recommendNext",
-        description: "推荐下一篇阅读。基于未读清单和阅读历史。",
-        parameters: { type: "object", properties: {} },
-      },
-    },
-    async () => {
+  registerTool("recommendNext", tool({
+    description: "推荐下一篇阅读。基于未读清单和阅读历史。",
+    parameters: z.object({}),
+    execute: async () => {
       const unread = await getRepositories().articles.list({ status: "unread" });
 
       if (unread.length === 0) {
@@ -156,5 +103,5 @@ export function registerReadingTools(): void {
         reason: `推荐阅读「${recommendation.title}」，它是你阅读清单中最早添加的未读文章。`,
       };
     },
-  );
+  } as any));
 }

@@ -445,6 +445,21 @@ async fn daemon_put<T: for<'de> Deserialize<'de>>(path: &str, body: serde_json::
         .map_err(|e| format!("解析响应失败: {}", e))
 }
 
+// ---- Voice Commands ----
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VoiceStatus {
+    pub asr: bool,
+    pub tts: serde_json::Value,
+    pub vad: serde_json::Value,
+}
+
+#[tauri::command]
+async fn get_voice_status() -> Result<VoiceStatus, String> {
+    daemon_get("/api/voice/status").await
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -467,7 +482,8 @@ pub fn run() {
             get_daily_summary,
             get_weekly_stats,
             get_settings,
-            update_storage_mode
+            update_storage_mode,
+            get_voice_status
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {
