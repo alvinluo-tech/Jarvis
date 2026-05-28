@@ -48,6 +48,9 @@ importers:
         specifier: ^3.24.0
         version: 3.25.76
     devDependencies:
+      '@ai-sdk/provider':
+        specifier: ^3.0.10
+        version: 3.0.10
       '@types/better-sqlite3':
         specifier: ^7.6.0
         version: 7.6.13

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { MessageSquarePlus } from "lucide-react";
 import { MessageBubble } from "./MessageBubble";
 import { ChatInput } from "./ChatInput";
@@ -11,10 +12,23 @@ interface ChatPanelProps {
   isLoading: boolean;
   voiceSpeak?: (text: string) => void;
   hasActiveConversation: boolean;
+  error?: string | null;
 }
 
-export function ChatPanel({ messages, onSend, isLoading, hasActiveConversation }: ChatPanelProps) {
+export function ChatPanel({ messages, onSend, isLoading, hasActiveConversation, error }: ChatPanelProps) {
   const createConversation = useConversationStore((s) => s.createConversation);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom on new messages or loading state change
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    // Only auto-scroll if user is near the bottom (within 150px)
+    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 150;
+    if (isNearBottom || isLoading) {
+      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    }
+  }, [messages, isLoading, error]);
 
   if (!hasActiveConversation) {
     return (
@@ -32,7 +46,7 @@ export function ChatPanel({ messages, onSend, isLoading, hasActiveConversation }
   return (
     <div className="flex flex-col h-full">
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((msg) => (
           <MessageBubble key={msg.id} message={msg} />
         ))}
@@ -40,6 +54,13 @@ export function ChatPanel({ messages, onSend, isLoading, hasActiveConversation }
           <div className="flex justify-start">
             <div className="bg-secondary rounded-lg px-4 py-2 text-sm">
               <span className="animate-pulse">思考中...</span>
+            </div>
+          </div>
+        )}
+        {error && (
+          <div className="flex justify-start">
+            <div className="bg-destructive/10 text-destructive border border-destructive/20 rounded-lg px-4 py-2 text-sm">
+              {error}
             </div>
           </div>
         )}

@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Settings } from "lucide-react";
 
 function App() {
-  const { messages, sendMessage, isLoading, activeConversationId } = useChat();
+  const { messages, sendMessage, isLoading, activeConversationId, error } = useChat();
   const [showSettings, setShowSettings] = useState(false);
   const paletteToggle = usePaletteStore((s) => s.toggle);
 
@@ -110,6 +110,7 @@ function App() {
           isLoading={isLoading}
           voiceSpeak={voice.speak}
           hasActiveConversation={!!activeConversationId}
+          error={error}
         />
       </main>
 

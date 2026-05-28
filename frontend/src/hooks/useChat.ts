@@ -30,6 +30,7 @@ export function useChat() {
     activeConversationId,
     sendMessage: storeSendMessage,
     createConversation,
+    error,
   } = useConversationStore();
 
   const [streamingContent, setStreamingContent] = useState<string>("");
@@ -127,5 +128,6 @@ export function useChat() {
     isStreaming,
     streamingContent,
     activeConversationId,
+    error,
   };
 }

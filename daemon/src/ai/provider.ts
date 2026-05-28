@@ -1,4 +1,5 @@
 import { createOpenAI } from "@ai-sdk/openai";
+import type { LanguageModelV3 } from "@ai-sdk/provider";
 import { env } from "../config/env.js";
 
 export type AIProviderName = "mimo" | "groq" | "openrouter" | "local";
@@ -46,10 +47,12 @@ export function getProvider(name?: AIProviderName) {
   });
 }
 
-export function getModel(providerName?: AIProviderName, modelName?: string): ReturnType<ReturnType<typeof createOpenAI>> {
+export function getModel(providerName?: AIProviderName, modelName?: string): LanguageModelV3 {
   const provider = getProvider(providerName);
   const model = modelName ?? env.AI_MODEL;
-  return provider(model);
+  // Use .chat() for Chat Completions API (compatible with MiMo, Groq, OpenRouter, Ollama)
+  // The default provider() uses Responses API which most providers don't support
+  return provider.chat(model);
 }
 
 export function getProviderName(): AIProviderName {

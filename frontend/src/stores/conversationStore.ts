@@ -111,21 +111,33 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
       }
     }
 
-    set({ isSending: true, error: null });
+    // Immediately show user message (optimistic update)
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMessage: ConversationMessage = {
+      id: tempId,
+      conversationId: conversationId!,
+      role: "user",
+      content,
+      toolCalls: null,
+      toolCallId: null,
+      createdAt: new Date().toISOString(),
+    };
+    set((state) => ({
+      messages: [...state.messages, optimisticMessage],
+      isSending: true,
+      error: null,
+    }));
 
     try {
       const result = await tauri.sendConversationMessage(conversationId!, content);
 
-      // Optimistically add user message
+      // Replace temp user message with real one, add assistant message
       set((state) => ({
-        messages: [...state.messages, result.userMessage],
-      }));
-
-      // Add assistant message after response
-      set((state) => ({
-        messages: [...state.messages, result.assistantMessage],
+        messages: [
+          ...state.messages.map((m) => (m.id === tempId ? result.userMessage : m)),
+          result.assistantMessage,
+        ],
         isSending: false,
-        // Update conversation in list
         conversations: state.conversations.map((c) =>
           c.id === result.conversation.id ? result.conversation : c,
         ),
@@ -133,7 +145,12 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
 
       return result;
     } catch (error) {
-      set({ error: String(error), isSending: false });
+      // Remove temp message on error
+      set((state) => ({
+        messages: state.messages.filter((m) => m.id !== tempId),
+        error: String(error),
+        isSending: false,
+      }));
       return null;
     }
   },
