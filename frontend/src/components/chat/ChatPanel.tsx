@@ -67,7 +67,13 @@ export function ChatPanel({ messages, onSend, isLoading, hasActiveConversation, 
     if (conversationId !== prevConversationIdRef.current) {
       prevConversationIdRef.current = conversationId;
       setHasNewMessage(false);
-      requestAnimationFrame(() => scrollToBottom("instant"));
+      
+      // Perform initial snap and double-run after DOM rendering paints to ensure 100% bottom lock
+      scrollToBottom("instant");
+      const timer = setTimeout(() => {
+        scrollToBottom("instant");
+      }, 80);
+      return () => clearTimeout(timer);
     }
   }, [conversationId, scrollToBottom]);
 
@@ -78,8 +84,14 @@ export function ChatPanel({ messages, onSend, isLoading, hasActiveConversation, 
 
     if (isNearBottomRef.current || isUserMessage) {
       const behavior = (isLoading || isVoiceStreaming) ? "instant" : "smooth";
+      
+      // Immediate scroll, followed by a layout-paint delay retry to capture new browser size mutations
       scrollToBottom(behavior);
+      const timer = setTimeout(() => {
+        scrollToBottom(behavior);
+      }, 60);
       setHasNewMessage(false);
+      return () => clearTimeout(timer);
     } else {
       setHasNewMessage(true);
     }
@@ -160,21 +172,22 @@ export function ChatPanel({ messages, onSend, isLoading, hasActiveConversation, 
           )}
         </div>
 
-        {/* Scroll to bottom button — premium float widget */}
+        {/* Scroll to bottom button — centered pill above the input area */}
         {showScrollButton && (
           <button
             onClick={() => {
               scrollToBottom("smooth");
               setHasNewMessage(false);
             }}
-            className="absolute bottom-6 right-6 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-background border border-border hover:bg-accent shadow-xl text-muted-foreground hover:text-foreground transition-all duration-300 transform scale-100 hover:scale-110 active:scale-95 animate-in fade-in slide-in-from-bottom-3 cursor-pointer group"
+            className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-4 py-2 rounded-full bg-background border border-border hover:bg-accent shadow-xl text-xs font-mono font-bold tracking-wider text-muted-foreground hover:text-foreground transition-all duration-300 transform scale-100 hover:scale-105 active:scale-95 animate-in fade-in slide-in-from-bottom-3 cursor-pointer group"
             title="回到底部"
           >
-            <ArrowDown className="h-5 w-5 group-hover:translate-y-0.5 transition-transform duration-200" />
+            <ArrowDown className="h-3.5 w-3.5 group-hover:translate-y-0.5 transition-transform duration-200" />
+            <span>回到底部</span>
             {hasNewMessage && (
-              <span className="absolute -top-1 -right-1 flex h-3 w-3">
+              <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-cyan-500"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
               </span>
             )}
           </button>
