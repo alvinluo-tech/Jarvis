@@ -1,8 +1,17 @@
 import { Hono } from "hono";
 import type { ToolSource, RiskLevel } from "@jarvis/types";
 import { getRegistry } from "../tools/registry.js";
+import { getRepositories } from "../db/factory.js";
 
 const app = new Hono();
+
+// Get recent tool call audit logs
+app.get("/logs", async (c) => {
+  const limit = parseInt(c.req.query("limit") ?? "20", 10);
+  const repos = getRepositories();
+  const logs = await repos.toolCallLogs.getRecent(limit);
+  return c.json({ logs });
+});
 
 // List all registered tools
 app.get("/", (c) => {

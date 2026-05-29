@@ -306,6 +306,10 @@ export async function getTool(toolId: string): Promise<ToolInfo> {
   return invoke("get_tool", { toolId });
 }
 
+export async function getToolCallLogs(limit = 20): Promise<{ logs: ToolCallLogEntry[] }> {
+  return invoke("get_tool_call_logs", { limit });
+}
+
 // ---- Model Gateway ----
 
 export interface ModelProfile {
@@ -329,4 +333,42 @@ export interface ModelProfile {
 
 export async function listModelProfiles(): Promise<{ profiles: ModelProfile[] }> {
   return invoke("list_model_profiles");
+}
+
+// ---- Daemon Supervisor ----
+
+export interface DaemonStatus {
+  running: boolean;
+  healthy: boolean;
+  url: string;
+  restartAttempts: number;
+  lastHealthCheck: string | null;
+  lastError: string | null;
+}
+
+export async function getDaemonStatus(): Promise<DaemonStatus> {
+  return invoke("daemon_status");
+}
+
+export async function restartDaemon(): Promise<DaemonStatus> {
+  return invoke("restart_daemon");
+}
+
+// ---- Tool Call Audit Logs ----
+
+export interface ToolCallLogEntry {
+  id: string;
+  toolId: string;
+  toolName: string;
+  appId: string | null;
+  source: string;
+  args: unknown | null;
+  resultSuccess: boolean | null;
+  resultData: unknown | null;
+  resultError: string | null;
+  risk: string | null;
+  confirmedByUser: boolean | null;
+  durationMs: number | null;
+  conversationId: string | null;
+  createdAt: string;
 }

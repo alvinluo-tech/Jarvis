@@ -513,6 +513,12 @@ async fn get_tool(tool_id: String) -> Result<serde_json::Value, String> {
     daemon_get(&format!("/api/tools/{}", tool_id)).await
 }
 
+#[tauri::command]
+async fn get_tool_call_logs(limit: Option<u32>) -> Result<serde_json::Value, String> {
+    let l = limit.unwrap_or(20);
+    daemon_get(&format!("/api/tools/logs?limit={}", l)).await
+}
+
 // ---- Model Gateway Commands ----
 
 #[tauri::command]
@@ -558,6 +564,7 @@ pub fn run() {
             list_mcp_prompts,
             list_all_tools,
             get_tool,
+            get_tool_call_logs,
             list_model_profiles,
             daemon_supervisor::daemon_status,
             daemon_supervisor::start_daemon,

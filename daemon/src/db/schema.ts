@@ -139,3 +139,22 @@ export const memories = sqliteTable("memories", {
   createdAt: text("created_at").default("CURRENT_TIMESTAMP").notNull(),
   updatedAt: text("updated_at").default("CURRENT_TIMESTAMP").notNull(),
 });
+
+// ---- Agent Runs ----
+
+export const agentRuns = sqliteTable("agent_runs", {
+  id: text("id").primaryKey(),
+  conversationId: text("conversation_id"),
+  userMessageId: text("user_message_id"),
+  assistantMessageId: text("assistant_message_id"),
+  status: text("status", { enum: ["running", "succeeded", "failed", "cancelled"] })
+    .default("running")
+    .notNull(),
+  selectedModel: text("selected_model"),
+  routeReason: text("route_reason"),
+  toolCallCount: integer("tool_call_count").default(0),
+  startedAt: text("started_at").default("CURRENT_TIMESTAMP").notNull(),
+  completedAt: text("completed_at"),
+  durationMs: integer("duration_ms"),
+  error: text("error"),
+});

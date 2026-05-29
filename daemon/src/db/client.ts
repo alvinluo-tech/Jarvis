@@ -143,6 +143,23 @@ sqlite.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_memories_user ON memories(user_id, type);
   CREATE INDEX IF NOT EXISTS idx_memories_key ON memories(key);
+
+  CREATE TABLE IF NOT EXISTS agent_runs (
+    id TEXT PRIMARY KEY,
+    conversation_id TEXT,
+    user_message_id TEXT,
+    assistant_message_id TEXT,
+    status TEXT NOT NULL DEFAULT 'running' CHECK(status IN ('running', 'succeeded', 'failed', 'cancelled')),
+    selected_model TEXT,
+    route_reason TEXT,
+    tool_call_count INTEGER DEFAULT 0,
+    started_at TEXT DEFAULT 'CURRENT_TIMESTAMP',
+    completed_at TEXT,
+    duration_ms INTEGER,
+    error TEXT
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_agent_runs_conversation ON agent_runs(conversation_id);
 `);
 
 export const db = drizzle(sqlite, { schema });

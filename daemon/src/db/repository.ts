@@ -206,6 +206,21 @@ export interface MemoryRow {
   updatedAt: string;
 }
 
+export interface AgentRunRow {
+  id: string;
+  conversationId: string | null;
+  userMessageId: string | null;
+  assistantMessageId: string | null;
+  status: "running" | "succeeded" | "failed" | "cancelled";
+  selectedModel: string | null;
+  routeReason: string | null;
+  toolCallCount: number | null;
+  startedAt: string;
+  completedAt: string | null;
+  durationMs: number | null;
+  error: string | null;
+}
+
 // ---- Repository Interfaces ----
 
 export interface TaskRepository {
@@ -322,6 +337,24 @@ export interface MemoryRepository {
   cleanExpired(): Promise<number>;
 }
 
+// ---- Agent Run ----
+
+export interface CreateAgentRunInput {
+  conversationId?: string;
+  userMessageId?: string;
+  assistantMessageId?: string;
+  selectedModel?: string;
+  routeReason?: string;
+}
+
+export interface AgentRunRepository {
+  create(input: CreateAgentRunInput): Promise<AgentRunRow>;
+  getById(id: string): Promise<AgentRunRow | null>;
+  getByConversation(conversationId: string): Promise<AgentRunRow[]>;
+  getRecent(limit?: number): Promise<AgentRunRow[]>;
+  updateStatus(id: string, status: AgentRunRow["status"], error?: string): Promise<void>;
+}
+
 // ---- Aggregate ----
 
 export interface Repositories {
@@ -333,4 +366,5 @@ export interface Repositories {
   appConnections: AppConnectionRepository;
   modelProfiles: ModelProfileRepository;
   memories: MemoryRepository;
+  agentRuns: AgentRunRepository;
 }

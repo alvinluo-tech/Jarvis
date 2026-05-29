@@ -7,6 +7,7 @@ import { createSupabaseToolCallLogRepo } from "./tool-call-log-repo.js";
 import { createSupabaseAppConnectionRepo } from "./app-connection-repo.js";
 import { createSupabaseModelProfileRepo } from "./model-profile-repo.js";
 import { createSupabaseMemoryRepo } from "./memory-repo.js";
+import { createSupabaseAgentRunRepo } from "./agent-run-repo.js";
 
 export function createSupabaseRepositories(): Repositories {
   return {
@@ -18,5 +19,6 @@ export function createSupabaseRepositories(): Repositories {
     appConnections: createSupabaseAppConnectionRepo(),
     modelProfiles: createSupabaseModelProfileRepo(),
     memories: createSupabaseMemoryRepo(),
+    agentRuns: createSupabaseAgentRunRepo(),
   };
 }

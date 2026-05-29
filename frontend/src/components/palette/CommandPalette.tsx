@@ -15,10 +15,9 @@ interface CommandPaletteProps {
   onChat: (message: string) => void;
   onNavigate: (view: string) => void;
   onVoiceToggle: () => void;
-  onOpenSettings: () => void;
 }
 
-export function CommandPalette({ onChat, onNavigate, onVoiceToggle, onOpenSettings }: CommandPaletteProps) {
+export function CommandPalette({ onChat, onNavigate, onVoiceToggle }: CommandPaletteProps) {
   const { isOpen, query, selectedIndex, close, setQuery, setSelectedIndex, moveUp, moveDown } = usePaletteStore();
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -65,11 +64,11 @@ export function CommandPalette({ onChat, onNavigate, onVoiceToggle, onOpenSettin
     },
     {
       id: "settings",
-      label: "设置",
-      description: "打开设置面板",
+      label: "控制中心",
+      description: "打开系统控制中心",
       icon: <Settings className="h-4 w-4" />,
-      action: () => { onOpenSettings(); close(); },
-      keywords: ["设置", "settings", "配置"],
+      action: () => { onNavigate("control-center"); close(); },
+      keywords: ["设置", "settings", "配置", "控制", "control"],
     },
     {
       id: "help",

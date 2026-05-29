@@ -6,7 +6,7 @@ import { ReadingList } from "@/components/modules/reading/ReadingList";
 import { DailySummary } from "@/components/modules/review/DailySummary";
 import { VoicePanel } from "@/components/voice/VoicePanel";
 import { JarvisVoiceOverlay } from "@/components/voice/JarvisVoiceOverlay";
-import { SettingsModal } from "@/components/settings/SettingsModal";
+import { ControlCenter } from "@/components/control-center/ControlCenter";
 import { CommandPalette } from "@/components/palette/CommandPalette";
 import { useChat } from "@/hooks/useChat";
 import { useVoice } from "@/hooks/useVoice";
@@ -82,7 +82,7 @@ function App() {
     );
   }
   const { messages, sendMessage, isLoading, activeConversationId, error, startNewChat } = useChat();
-  const [showSettings, setShowSettings] = useState(false);
+  const [currentView, setCurrentView] = useState<"main" | "control-center">("main");
   const paletteToggle = usePaletteStore((s) => s.toggle);
 
   // Global keyboard shortcut: Alt+Space to toggle command palette
@@ -225,6 +225,8 @@ function App() {
   const handlePaletteNavigate = useCallback((view: string) => {
     if (view === "new-chat") {
       // Will be handled by conversation store
+    } else if (view === "control-center") {
+      setCurrentView("control-center");
     }
   }, []);
 
@@ -277,6 +279,11 @@ function App() {
     voiceConv.state !== "idle" ? voiceConv.finalTranscript : voice.transcript;
   const panelSupported = voiceConv.isSupported || voice.isSupported;
 
+  // Control Center view
+  if (currentView === "control-center") {
+    return <ControlCenter onBack={() => setCurrentView("main")} />;
+  }
+
   return (
     <div className="flex h-screen bg-background">
       {/* Left sidebar */}
@@ -289,7 +296,7 @@ function App() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setShowSettings(true)}
+            onClick={() => setCurrentView("control-center")}
             className="h-8 w-8"
           >
             <Settings className="h-4 w-4" />
@@ -346,11 +353,7 @@ function App() {
         onChat={handlePaletteChat}
         onNavigate={handlePaletteNavigate}
         onVoiceToggle={handleVoiceToggle}
-        onOpenSettings={() => setShowSettings(true)}
       />
-
-      {/* Settings Modal */}
-      <SettingsModal open={showSettings} onClose={() => setShowSettings(false)} />
 
       {/* Futuristic Sci-Fi Voice Overlay */}
       <JarvisVoiceOverlay

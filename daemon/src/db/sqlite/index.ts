@@ -7,6 +7,7 @@ import { createSqliteToolCallLogRepo } from "./tool-call-log-repo.js";
 import { createSqliteAppConnectionRepo } from "./app-connection-repo.js";
 import { createSqliteModelProfileRepo } from "./model-profile-repo.js";
 import { createSqliteMemoryRepo } from "./memory-repo.js";
+import { createSqliteAgentRunRepo } from "./agent-run-repo.js";
 
 export function createSqliteRepositories(): Repositories {
   return {
@@ -18,5 +19,6 @@ export function createSqliteRepositories(): Repositories {
     appConnections: createSqliteAppConnectionRepo(),
     modelProfiles: createSqliteModelProfileRepo(),
     memories: createSqliteMemoryRepo(),
+    agentRuns: createSqliteAgentRunRepo(),
   };
 }
