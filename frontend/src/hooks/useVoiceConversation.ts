@@ -211,6 +211,31 @@ export function useVoiceConversation(
     prevStateRef.current = state;
   }, [state, startPostConversationListen]);
 
+  // Synchronize Tauri Window Always-on-Top focus based on voice conversation state
+  useEffect(() => {
+    const isActive = state !== "idle";
+    const syncWindowPriority = async () => {
+      if (typeof window === "undefined") return;
+      try {
+        const { getCurrentWindow } = await import("@tauri-apps/api/window");
+        const appWindow = getCurrentWindow();
+        if (isActive) {
+          console.log("[Tauri Window] Bringing Jarvis to the absolute top");
+          await appWindow.show().catch(() => {});
+          await appWindow.unminimize().catch(() => {});
+          await appWindow.setAlwaysOnTop(true).catch(() => {});
+          await appWindow.setFocus().catch(() => {});
+        } else {
+          console.log("[Tauri Window] Releasing always-on-top lock");
+          await appWindow.setAlwaysOnTop(false).catch(() => {});
+        }
+      } catch (e) {
+        // Safe ignore in browser/non-Tauri environments
+      }
+    };
+    syncWindowPriority();
+  }, [state]);
+
   useEffect(() => {
     setIsSupported(
       Boolean(navigator.mediaDevices?.getUserMedia) || isWebSpeechASRAvailable(),
