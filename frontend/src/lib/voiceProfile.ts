@@ -1,4 +1,16 @@
-import type { VoiceProfile, VoiceConfig } from "@jarvis/types";
+export interface VoiceProfile {
+  id: string;
+  name: string;
+  language: string;
+  model: string;
+  gender: "male" | "female" | "neutral";
+  style: string;
+}
+
+interface VoiceConfig {
+  defaultProfileId: string;
+  profiles: Record<string, VoiceProfile>;
+}
 
 const DEFAULT_VOICE_PROFILE: VoiceProfile = {
   id: "moli",

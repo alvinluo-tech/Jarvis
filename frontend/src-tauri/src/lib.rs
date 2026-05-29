@@ -1,4 +1,8 @@
+mod daemon_supervisor;
+
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ChatResponse {
@@ -518,7 +522,12 @@ async fn list_model_profiles() -> Result<serde_json::Value, String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let daemon_url = std::env::var("DAEMON_URL").unwrap_or_else(|_| "http://127.0.0.1:3001".to_string());
+    let supervisor = daemon_supervisor::DaemonSupervisor::new(daemon_url);
+    let supervisor_state = daemon_supervisor::DaemonSupervisorState(Arc::new(Mutex::new(supervisor)));
+
     tauri::Builder::default()
+        .manage(supervisor_state)
         .invoke_handler(tauri::generate_handler![
             send_message,
             health_check,
@@ -549,7 +558,11 @@ pub fn run() {
             list_mcp_prompts,
             list_all_tools,
             get_tool,
-            list_model_profiles
+            list_model_profiles,
+            daemon_supervisor::daemon_status,
+            daemon_supervisor::start_daemon,
+            daemon_supervisor::stop_daemon,
+            daemon_supervisor::restart_daemon
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {
