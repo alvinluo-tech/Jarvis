@@ -7,6 +7,9 @@ interface VoicePanelProps {
   state: VoiceState;
   transcript: string;
   isSupported: boolean;
+  isWakeWordListening?: boolean;
+  wakeWordMethod?: "porcupine" | "webspeech" | null;
+  wakeWordError?: string | null;
   onToggle: () => void;
 }
 
@@ -26,7 +29,7 @@ const stateColors: Record<VoiceState, string> = {
   speaking: "bg-purple-500/20 border-purple-500",
 };
 
-export function VoicePanel({ state, transcript, isSupported, onToggle }: VoicePanelProps) {
+export function VoicePanel({ state, transcript, isSupported, isWakeWordListening, wakeWordMethod, wakeWordError, onToggle }: VoicePanelProps) {
   if (!isSupported) {
     return (
       <div className="text-xs text-muted-foreground text-center py-2">
@@ -42,12 +45,13 @@ export function VoicePanel({ state, transcript, isSupported, onToggle }: VoicePa
       {/* Voice button */}
       <div className="flex items-center gap-3">
         <Button
-          variant={isActive ? "default" : "outline"}
+          variant={isActive || isWakeWordListening ? "default" : "outline"}
           size="icon"
           onClick={onToggle}
           className={cn(
             "h-10 w-10 rounded-full transition-all",
             isActive && "animate-pulse",
+            isWakeWordListening && !isActive && "bg-green-600 hover:bg-green-700",
             state === "recording" && "bg-green-600 hover:bg-green-700",
             state === "transcribing" && "bg-blue-600 hover:bg-blue-700",
             state === "speaking" && "bg-purple-600 hover:bg-purple-700",
@@ -55,7 +59,7 @@ export function VoicePanel({ state, transcript, isSupported, onToggle }: VoicePa
         >
           {state === "transcribing" || state === "processing" ? (
             <Loader2 className="h-4 w-4 animate-spin" />
-          ) : isActive ? (
+          ) : isActive || isWakeWordListening ? (
             <Mic className="h-4 w-4" />
           ) : (
             <MicOff className="h-4 w-4" />
@@ -63,7 +67,9 @@ export function VoicePanel({ state, transcript, isSupported, onToggle }: VoicePa
         </Button>
 
         <div className="flex-1 min-w-0">
-          <p className="text-xs text-muted-foreground">{stateLabels[state]}</p>
+          <p className="text-xs text-muted-foreground">
+            {isWakeWordListening && !isActive ? '说 "Hey Jarvis" 唤醒' : stateLabels[state]}
+          </p>
           {transcript && (
             <p className="text-sm truncate mt-0.5">{transcript}</p>
           )}
@@ -74,11 +80,28 @@ export function VoicePanel({ state, transcript, isSupported, onToggle }: VoicePa
         )}
       </div>
 
+      {/* Wake word error */}
+      {wakeWordError && (
+        <div className="rounded-md border p-2 text-xs bg-destructive/10 text-destructive">
+          唤醒词错误: {wakeWordError}
+        </div>
+      )}
+
       {/* Hint */}
-      {!isActive && (
+      {!isActive && !isWakeWordListening && (
         <div className="rounded-md border p-2 text-xs bg-secondary">
           <p className="text-muted-foreground">
-            点击麦克风开始语音，说完自动识别（Groq Whisper + MiMo TTS）
+            点击麦克风开启唤醒词模式（"Hey Jarvis"）
+          </p>
+        </div>
+      )}
+
+      {/* Wake word active hint */}
+      {isWakeWordListening && !isActive && (
+        <div className="rounded-md border p-2 text-xs bg-green-500/10 border-green-500/30">
+          <p className="text-green-400">
+            🎙️ 等待唤醒... 说 "Hey Jarvis" 开始对话
+            {wakeWordMethod && <span className="text-muted-foreground ml-1">({wakeWordMethod})</span>}
           </p>
         </div>
       )}

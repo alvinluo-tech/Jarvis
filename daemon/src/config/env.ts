@@ -53,4 +53,7 @@ export const env = {
   // Server
   DAEMON_PORT: parseInt(getEnvVar("DAEMON_PORT", [], "3001"), 10),
   DAEMON_HOST: getEnvVar("DAEMON_HOST", [], "localhost"),
+
+  // Wake word (Porcupine)
+  PORCUPINE_ACCESS_KEY: getEnvVar("PORCUPINE_ACCESS_KEY", [], ""),
 } as const;

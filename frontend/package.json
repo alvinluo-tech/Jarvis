@@ -14,6 +14,8 @@
   },
   "dependencies": {
     "@ai-sdk/react": "^3.0.194",
+    "@picovoice/porcupine-web": "^4.0.0",
+    "@picovoice/web-voice-processor": "^4.0.10",
     "@tailwindcss/typography": "^0.5.19",
     "@tauri-apps/api": "^2.2.0",
     "class-variance-authority": "^0.7.1",

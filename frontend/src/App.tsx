@@ -90,6 +90,9 @@ function App() {
             state={voice.state}
             transcript={voice.transcript}
             isSupported={voice.isSupported}
+            isWakeWordListening={voice.isWakeWordListening}
+            wakeWordMethod={voice.wakeWordMethod}
+            wakeWordError={voice.wakeWordError}
             onToggle={voice.toggleListening}
           />
 

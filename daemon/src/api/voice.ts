@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { transcribeWithGroq, isAsrAvailable } from "../voice/asr.js";
 import { synthesizeSpeech, isTtsAvailable, type TTSModel } from "../voice/tts.js";
+import { env } from "../config/env.js";
 
 const voiceRoutes = new Hono();
 
@@ -88,6 +89,7 @@ voiceRoutes.get("/status", (c) => {
     asr: isAsrAvailable(),
     tts: isTtsAvailable(),
     ttsModels: ["mimo-v2.5-tts", "mimo-v2.5-tts-voiceclone", "mimo-v2.5-tts-voicedesign"],
+    porcupineAccessKey: env.PORCUPINE_ACCESS_KEY || null,
   });
 });
 
