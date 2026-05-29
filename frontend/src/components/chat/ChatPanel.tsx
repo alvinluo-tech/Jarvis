@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import type { Message } from "@/hooks/useChat";
 import { useConversationStore } from "@/stores/conversationStore";
 
-const NEAR_BOTTOM_THRESHOLD = 150;
 
 interface ChatPanelProps {
   messages: Message[];
@@ -28,12 +27,15 @@ export function ChatPanel({ messages, onSend, isLoading, hasActiveConversation, 
   const isNearBottomRef = useRef(true);
   const prevConversationIdRef = useRef(conversationId);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [hasNewMessage, setHasNewMessage] = useState(false);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     const el = scrollRef.current;
     if (!el) return;
-    el.scrollTo({ top: el.scrollHeight, behavior });
+    
+    isNearBottomRef.current = true;
     setShowScrollButton(false);
+    el.scrollTo({ top: el.scrollHeight, behavior });
   }, []);
 
   // Track scroll position
@@ -42,9 +44,18 @@ export function ChatPanel({ messages, onSend, isLoading, hasActiveConversation, 
     if (!el) return;
 
     const handleScroll = () => {
-      const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < NEAR_BOTTOM_THRESHOLD;
+      const threshold = 100;
+      const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+      const nearBottom = distanceToBottom < threshold;
+      
       isNearBottomRef.current = nearBottom;
-      setShowScrollButton(!nearBottom);
+      
+      const isScrollable = el.scrollHeight > el.clientHeight;
+      setShowScrollButton(!nearBottom && isScrollable);
+      
+      if (nearBottom) {
+        setHasNewMessage(false);
+      }
     };
 
     el.addEventListener("scroll", handleScroll, { passive: true });
@@ -55,15 +66,22 @@ export function ChatPanel({ messages, onSend, isLoading, hasActiveConversation, 
   useEffect(() => {
     if (conversationId !== prevConversationIdRef.current) {
       prevConversationIdRef.current = conversationId;
-      // Use requestAnimationFrame to wait for DOM to render
+      setHasNewMessage(false);
       requestAnimationFrame(() => scrollToBottom("instant"));
     }
   }, [conversationId, scrollToBottom]);
 
   // Auto-scroll on new messages / streaming when user is at bottom
   useEffect(() => {
-    if (isNearBottomRef.current || isLoading || isVoiceStreaming) {
-      scrollToBottom("smooth");
+    const lastMessage = messages[messages.length - 1];
+    const isUserMessage = lastMessage && lastMessage.role === "user";
+
+    if (isNearBottomRef.current || isUserMessage) {
+      const behavior = (isLoading || isVoiceStreaming) ? "instant" : "smooth";
+      scrollToBottom(behavior);
+      setHasNewMessage(false);
+    } else {
+      setHasNewMessage(true);
     }
   }, [messages, isLoading, error, voiceAssistantText, isVoiceStreaming, scrollToBottom]);
 
@@ -142,14 +160,23 @@ export function ChatPanel({ messages, onSend, isLoading, hasActiveConversation, 
           )}
         </div>
 
-        {/* Scroll to bottom button — pinned to bottom of messages container */}
+        {/* Scroll to bottom button — premium float widget */}
         {showScrollButton && (
           <button
-            onClick={() => scrollToBottom("smooth")}
-            className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary border shadow-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer"
+            onClick={() => {
+              scrollToBottom("smooth");
+              setHasNewMessage(false);
+            }}
+            className="absolute bottom-6 right-6 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-background border border-border hover:bg-accent shadow-xl text-muted-foreground hover:text-foreground transition-all duration-300 transform scale-100 hover:scale-110 active:scale-95 animate-in fade-in slide-in-from-bottom-3 cursor-pointer group"
+            title="回到底部"
           >
-            <ArrowDown className="h-3.5 w-3.5" />
-            <span>回到底部</span>
+            <ArrowDown className="h-5 w-5 group-hover:translate-y-0.5 transition-transform duration-200" />
+            {hasNewMessage && (
+              <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-cyan-500"></span>
+              </span>
+            )}
           </button>
         )}
       </div>
