@@ -14,6 +14,7 @@ import reviewRoutes from "./api/reviews.js";
 import settingsRoutes from "./api/settings.js";
 import chatRoutes from "./api/chat.js";
 import voiceRoutes from "./api/voice.js";
+import mcpRoutes from "./api/mcp.js";
 
 // Initialize storage mode and repositories
 const storageMode = getStorageMode();
@@ -54,6 +55,9 @@ app.route("/api/settings", settingsRoutes);
 
 // Voice routes (ASR/TTS)
 app.route("/api/voice", voiceRoutes);
+
+// MCP routes (MCP server management, tools, resources, prompts)
+app.route("/api/mcp", mcpRoutes);
 
 function startServer(port: number) {
   try {
