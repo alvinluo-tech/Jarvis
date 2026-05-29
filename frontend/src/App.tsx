@@ -16,6 +16,7 @@ import { usePaletteStore } from "@/stores/paletteStore";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Settings } from "lucide-react";
+import { TitleBar } from "@/components/layout/TitleBar";
 
 const isAssistantWindow = typeof window !== "undefined" && window.location.search.includes("assistant=true");
 
@@ -281,11 +282,20 @@ function App() {
 
   // Control Center view
   if (currentView === "control-center") {
-    return <ControlCenter onBack={() => setCurrentView("main")} />;
+    return (
+      <div className="flex flex-col h-screen overflow-hidden bg-background">
+        <TitleBar />
+        <div className="flex-1 overflow-hidden">
+          <ControlCenter onBack={() => setCurrentView("main")} />
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex flex-col h-screen overflow-hidden bg-background">
+      <TitleBar />
+      <div className="flex flex-1 overflow-hidden">
       {/* Left sidebar */}
       <aside className="w-80 border-r border-border flex flex-col overflow-hidden">
         <header className="p-4 border-b border-border flex items-center justify-between">
@@ -347,6 +357,7 @@ function App() {
           isVoiceStreaming={voiceConv.state === "streaming"}
         />
       </main>
+      </div>
 
       {/* Command Palette (Alt+Space) */}
       <CommandPalette

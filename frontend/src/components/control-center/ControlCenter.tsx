@@ -51,7 +51,7 @@ export function ControlCenter({ onBack }: ControlCenterProps) {
   const PageComponent = pages[activePage];
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-full bg-background">
       {/* Left sidebar nav */}
       <aside className="w-56 border-r border-border flex flex-col overflow-hidden">
         <header className="p-4 border-b border-border">
