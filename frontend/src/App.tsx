@@ -42,6 +42,16 @@ function App() {
       async () => { return { id: "" }; }
     );
 
+    // Ensure the document background is fully transparent so Tauri window transparency works
+    useEffect(() => {
+      if (typeof document !== "undefined") {
+        document.body.style.backgroundColor = "transparent";
+        document.documentElement.style.backgroundColor = "transparent";
+        document.body.style.overflow = "hidden";
+        document.documentElement.style.overflow = "hidden";
+      }
+    }, []);
+
     useEffect(() => {
       let unlisten: (() => void) | null = null;
       
@@ -50,14 +60,20 @@ function App() {
           const { getCurrentWindow } = await import("@tauri-apps/api/window");
           const appWindow = getCurrentWindow();
           
-          const unsub = await appWindow.listen("wake-assistant", () => {
-            console.log("[Assistant Window] Received wake event, starting greeting");
-            voiceConv.playGreetingAndListen();
+          const unsub = await appWindow.listen<{ isHandoff?: boolean }>("wake-assistant", (event) => {
+            console.log("[Assistant Window] Received wake event, payload:", event.payload);
+            if (event.payload?.isHandoff) {
+              console.log("[Assistant Window] Handoff mode! Starting listening directly without greeting.");
+              voiceConv.startListening();
+            } else {
+              console.log("[Assistant Window] Fresh wake-word! Playing greeting and then listening.");
+              voiceConv.playGreetingAndListen();
+            }
           });
           unlisten = unsub;
-        } catch (e) {
-          console.warn("Failed to listen to wake event:", e);
-        }
+      } catch (e) {
+        console.warn("Failed to listen to wake event:", e);
+      }
       };
       
       setupListener();
@@ -107,9 +123,12 @@ function App() {
   const handleConversationIdle = useCallback(() => {
     setTimeout(() => {
       const v = voiceRef.current;
-      if (v && !v.isWakeWordListening) {
+      // Only restart wake word in the main window if it is currently in the foreground/focused!
+      if (v && !v.isWakeWordListening && document.hasFocus()) {
         console.log("[App] Restarting wake word after conversation idle");
         v.toggleListening();
+      } else {
+        console.log("[App] Main window is in background, skipping wake word restart");
       }
     }, 500);
   }, []);
@@ -121,7 +140,7 @@ function App() {
     startNewChat,
   );
 
-  const showAssistantWindow = useCallback(async () => {
+  const showAssistantWindow = useCallback(async (isHandoff = false) => {
     try {
       const { WebviewWindow } = await import("@tauri-apps/api/webviewWindow");
       const { currentMonitor, LogicalSize, LogicalPosition } = await import("@tauri-apps/api/window");
@@ -177,8 +196,8 @@ function App() {
       await assistant.show().catch(() => {});
       await assistant.setFocus().catch(() => {});
       
-      // Emit event to assistant window to wake it up
-      await assistant.emit("wake-assistant").catch(() => {});
+      // Emit event to assistant window to wake it up, passing the handoff state
+      await assistant.emit("wake-assistant", { isHandoff }).catch(() => {});
     } catch (err) {
       console.error("Failed to show assistant window:", err);
     }
@@ -273,6 +292,81 @@ function App() {
       if (unlisten) unlisten();
     };
   }, []);
+
+  // Listen to main window focus changes to:
+  // 1. Terminate main mic capture/wake-word in the background to free up the hardware mic.
+  // 2. Seamlessly hand off active dialogue to the assistant bubble when blurred.
+  // 3. Close the assistant bubble and restart wake-word when focused back in foreground.
+  useEffect(() => {
+    let unlisten: (() => void) | null = null;
+    
+    const setupFocusListener = async () => {
+      try {
+        const { getCurrentWindow } = await import("@tauri-apps/api/window");
+        const appWindow = getCurrentWindow();
+        
+        const unsub = await appWindow.onFocusChanged(async ({ payload: focused }) => {
+          const v = voiceRef.current;
+          
+          if (!focused) {
+            console.log("[App] Main window lost focus (blurred). Releasing voice engines...");
+            
+            // Check if voice conversation was active
+            const isConversationActive = voiceConv.state !== "idle" && voiceConv.state !== "error";
+            
+            // First stop any active dialogue
+            if (isConversationActive) {
+              voiceConv.stopConversation();
+            }
+            
+            // Completely stop all active mic recording / wake-word to free up hardware mic
+            if (v) {
+              v.stopListening();
+              if (v.isWakeWordListening) {
+                v.toggleListening(); // Stops Porcupine and sets wantsContinuous = false
+              }
+            }
+            
+            // Trigger assistant bubble takeover with a 200ms delay to allow browser to release mic
+            if (isConversationActive) {
+              setTimeout(() => {
+                showAssistantWindow(true);
+              }, 200);
+            }
+          } else {
+            console.log("[App] Main window gained focus (focused). Restoring foreground voice engine...");
+            
+            // 1. Hide the assistant window if it is open
+            try {
+              const { WebviewWindow } = await import("@tauri-apps/api/webviewWindow");
+              const assistant = await WebviewWindow.getByLabel("assistant");
+              if (assistant) {
+                await assistant.hide().catch(() => {});
+              }
+            } catch (e) {
+              console.warn("Failed to hide assistant window:", e);
+            }
+            
+            // 2. Refresh conversation messages to instantly merge the bubble's dialogue logs
+            refreshMessages();
+            
+            // 3. Restart wake-word engine in the foreground
+            if (v && !v.isWakeWordListening) {
+              v.toggleListening(); // Starts Porcupine
+            }
+          }
+        });
+        unlisten = unsub;
+      } catch (e) {
+        console.warn("Failed to listen to window focus event:", e);
+      }
+    };
+    
+    setupFocusListener();
+    return () => {
+      if (unlisten) unlisten();
+    };
+  }, [voiceConv.state, showAssistantWindow, refreshMessages]);
 
   // Determine which state to show in VoicePanel
   const panelState = voiceConv.state !== "idle" ? voiceConv.state : voice.state;

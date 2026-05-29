@@ -234,7 +234,7 @@ export function JarvisVoiceOverlay({
       className={cn(
         isCentered
           ? "fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-[8px] transition-all duration-300 animate-in fade-in"
-          : "fixed inset-0 z-50 w-full h-full flex items-center justify-center bg-background/95 backdrop-blur-xl transition-all duration-300 animate-in fade-in"
+          : "fixed inset-0 z-50 w-full h-full flex items-center justify-center bg-transparent transition-all duration-300 animate-in fade-in"
       )}
     >
       <div

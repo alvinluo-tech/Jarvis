@@ -102,12 +102,11 @@ impl DaemonSupervisor {
 }
 
 fn chrono_now() -> String {
-    // Simple timestamp without external chrono dependency
     use std::time::SystemTime;
     let dur = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap_or_default();
-    format!("{}.{:03}s", dur.as_secs(), dur.subsec_millis())
+    format!("{}", dur.as_millis())
 }
 
 // ---- Tauri Commands ----

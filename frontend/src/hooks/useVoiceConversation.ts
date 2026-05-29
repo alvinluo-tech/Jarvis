@@ -125,6 +125,8 @@ export function useVoiceConversation(
   const bargeInRef = useRef<() => void>(() => {});
   const isFarewellPlayingRef = useRef(false);
   const playFarewellAndExitRef = useRef<() => void>(() => {});
+  const greetingAudioCtxRef = useRef<AudioContext | null>(null);
+  const greetingSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
 
 
@@ -270,12 +272,15 @@ export function useVoiceConversation(
 
   // Synchronize Tauri Window bounds, decorations, and focus based on voice conversation state
   useEffect(() => {
+    // We no longer manipulate the main window size/focus here to prevent focus-stealing
+    // and allow normal multitasking. Let the main window behave normally.
+    return;
+    
     const isAssistant = typeof window !== "undefined" && window.location.search.includes("assistant=true");
     if (isAssistant) return;
 
     const isActive = state !== "idle";
     const syncWindow = async () => {
-      if (typeof window === "undefined") return;
       try {
         const { getCurrentWindow } = await import("@tauri-apps/api/window");
         const appWindow = getCurrentWindow();
@@ -376,6 +381,20 @@ export function useVoiceConversation(
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
+    }
+    
+    // Stop any active greeting audio playback immediately
+    if (greetingSourceRef.current) {
+      try {
+        greetingSourceRef.current.stop();
+      } catch {}
+      greetingSourceRef.current = null;
+    }
+    if (greetingAudioCtxRef.current) {
+      try {
+        greetingAudioCtxRef.current.close();
+      } catch {}
+      greetingAudioCtxRef.current = null;
     }
   }, []);
 
@@ -832,6 +851,7 @@ export function useVoiceConversation(
       // 2. Fetch spoken response
       const buffer = await jarvisClient.synthesize("我在的，主人。", voiceProfileManager.getVoiceName());
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      greetingAudioCtxRef.current = ctx;
       
       ctx.decodeAudioData(
         buffer,
@@ -839,8 +859,13 @@ export function useVoiceConversation(
           const source = ctx.createBufferSource();
           source.buffer = decoded;
           source.connect(ctx.destination);
+          greetingSourceRef.current = source;
           
           source.onended = () => {
+            greetingSourceRef.current = null;
+            if (greetingAudioCtxRef.current === ctx) {
+              greetingAudioCtxRef.current = null;
+            }
             ctx.close().catch(() => {});
             
             if (breathingTimerRef.current) {

@@ -90,7 +90,11 @@ export function SystemPage() {
             <p className="mt-0.5 flex items-center gap-1">
               <Clock className="h-3 w-3 text-muted-foreground" />
               {daemon?.lastHealthCheck
-                ? new Date(daemon.lastHealthCheck).toLocaleString("zh-CN")
+                ? !isNaN(Number(daemon.lastHealthCheck))
+                  ? new Date(Number(daemon.lastHealthCheck)).toLocaleString("zh-CN")
+                  : new Date(daemon.lastHealthCheck).toString() !== "Invalid Date"
+                    ? new Date(daemon.lastHealthCheck).toLocaleString("zh-CN")
+                    : daemon.lastHealthCheck
                 : "—"}
             </p>
           </div>

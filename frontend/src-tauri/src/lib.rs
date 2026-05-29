@@ -19,6 +19,16 @@ pub struct HealthResponse {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct DetailedHealthResponse {
+    pub status: String,
+    pub timestamp: String,
+    pub storage_mode: String,
+    pub ai_provider: String,
+    pub ai_model: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Conversation {
     pub id: String,
     pub title: String,
@@ -197,6 +207,11 @@ async fn send_message(message: String) -> Result<ChatResponse, String> {
 
 #[tauri::command]
 async fn health_check() -> Result<HealthResponse, String> {
+    daemon_get("/health").await
+}
+
+#[tauri::command]
+async fn get_health() -> Result<DetailedHealthResponse, String> {
     daemon_get("/health").await
 }
 
@@ -452,16 +467,61 @@ async fn daemon_put<T: for<'de> Deserialize<'de>>(path: &str, body: serde_json::
 // ---- Voice Commands ----
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct TtsStatus {
+    pub available: bool,
+    pub provider: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct VadStatus {
+    pub available: bool,
+    pub note: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VoiceStatus {
     pub asr: bool,
+    pub tts: TtsStatus,
+    pub vad: VadStatus,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct DaemonVoiceStatus {
+    pub asr: bool,
     pub tts: bool,
-    pub tts_models: Vec<String>,
+    pub porcupine_access_key: Option<String>,
 }
 
 #[tauri::command]
 async fn get_voice_status() -> Result<VoiceStatus, String> {
-    daemon_get("/api/voice/status").await
+    let raw: DaemonVoiceStatus = daemon_get("/api/voice/status").await?;
+    
+    let tts_provider = if raw.tts {
+        "MiMo TTS".to_string()
+    } else {
+        "未配置".to_string()
+    };
+
+    let vad_available = raw.porcupine_access_key.is_some() && !raw.porcupine_access_key.as_ref().unwrap().trim().is_empty();
+    let vad_note = if vad_available {
+        "已启用 (Porcupine)".to_string()
+    } else {
+        "未配置 Access Key".to_string()
+    };
+
+    Ok(VoiceStatus {
+        asr: raw.asr,
+        tts: TtsStatus {
+            available: raw.tts,
+            provider: tts_provider,
+        },
+        vad: VadStatus {
+            available: vad_available,
+            note: vad_note,
+        },
+    })
 }
 
 #[tauri::command]
@@ -612,6 +672,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             send_message,
             health_check,
+            get_health,
             list_conversations,
             create_conversation,
             get_conversation,
