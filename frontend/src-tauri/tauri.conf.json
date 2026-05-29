@@ -12,11 +12,26 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "Jarvis - Personal Command Center",
         "width": 1200,
         "height": 800,
         "resizable": true,
         "fullscreen": false
+      },
+      {
+        "label": "assistant",
+        "title": "Jarvis Assistant",
+        "url": "index.html?assistant=true",
+        "width": 360,
+        "height": 440,
+        "visible": false,
+        "decorations": false,
+        "resizable": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "transparent": true,
+        "shadow": true
       }
     ],
     "security": {

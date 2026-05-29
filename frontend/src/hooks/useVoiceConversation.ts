@@ -242,6 +242,9 @@ export function useVoiceConversation(
 
   // Synchronize Tauri Window bounds, decorations, and focus based on voice conversation state
   useEffect(() => {
+    const isAssistant = typeof window !== "undefined" && window.location.search.includes("assistant=true");
+    if (isAssistant) return;
+
     const isActive = state !== "idle";
     const syncWindow = async () => {
       if (typeof window === "undefined") return;

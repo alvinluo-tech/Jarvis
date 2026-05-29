@@ -17,7 +17,68 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Settings } from "lucide-react";
 
+const isAssistantWindow = typeof window !== "undefined" && window.location.search.includes("assistant=true");
+
 function App() {
+  // If this is the assistant floating window, run in a super-lightweight standalone mode!
+  if (isAssistantWindow) {
+    const handleAssistantIdle = useCallback(async () => {
+      console.log("[Assistant Window] Hiding window due to idle state");
+      try {
+        const { getCurrentWindow } = await import("@tauri-apps/api/window");
+        const appWindow = getCurrentWindow();
+        await appWindow.hide().catch(() => {});
+      } catch (e) {
+        console.warn("Failed to hide assistant window:", e);
+      }
+    }, []);
+
+    const voiceConv = useVoiceConversation(
+      null, // Start fresh
+      handleAssistantIdle,
+      async () => { return { id: "" }; }
+    );
+
+    useEffect(() => {
+      let unlisten: (() => void) | null = null;
+      
+      const setupListener = async () => {
+        try {
+          const { getCurrentWindow } = await import("@tauri-apps/api/window");
+          const appWindow = getCurrentWindow();
+          
+          const unsub = await appWindow.listen("wake-assistant", () => {
+            console.log("[Assistant Window] Received wake event, starting greeting");
+            voiceConv.playGreetingAndListen();
+          });
+          unlisten = unsub;
+        } catch (e) {
+          console.warn("Failed to listen to wake event:", e);
+        }
+      };
+      
+      setupListener();
+      
+      // Auto-start on initial load
+      voiceConv.playGreetingAndListen();
+      
+      return () => {
+        if (unlisten) unlisten();
+      };
+    }, []);
+
+    return (
+      <JarvisVoiceOverlay
+        state={voiceConv.state}
+        interimTranscript={voiceConv.interimTranscript}
+        finalTranscript={voiceConv.finalTranscript}
+        assistantText={voiceConv.assistantText}
+        onClose={voiceConv.stopConversation}
+        onStop={voiceConv.stopConversation}
+        layoutMode="bottom-right"
+      />
+    );
+  }
   const { messages, sendMessage, isLoading, activeConversationId, error, startNewChat } = useChat();
   const [showSettings, setShowSettings] = useState(false);
   const paletteToggle = usePaletteStore((s) => s.toggle);
@@ -57,10 +118,79 @@ function App() {
     startNewChat,
   );
 
+  const showAssistantWindow = useCallback(async () => {
+    try {
+      const { WebviewWindow } = await import("@tauri-apps/api/webviewWindow");
+      const { currentMonitor, LogicalSize, LogicalPosition } = await import("@tauri-apps/api/window");
+      
+      let assistant = await WebviewWindow.getByLabel("assistant");
+      
+      const ASSISTANT_WIDTH = 360;
+      const ASSISTANT_HEIGHT = 440;
+      const MARGIN_RIGHT = 24;
+      const MARGIN_BOTTOM = 24;
+      
+      if (!assistant) {
+        console.log("[App] Assistant window not found, creating dynamically");
+        assistant = new WebviewWindow("assistant", {
+          url: "index.html?assistant=true",
+          title: "Jarvis Assistant",
+          width: ASSISTANT_WIDTH,
+          height: ASSISTANT_HEIGHT,
+          visible: false,
+          decorations: false,
+          resizable: false,
+          alwaysOnTop: true,
+          skipTaskbar: true,
+          transparent: true,
+          shadow: true,
+        });
+        
+        await new Promise<void>((resolve, reject) => {
+          assistant!.once("tauri://created", () => resolve());
+          assistant!.once("tauri://error", (e) => reject(e));
+        });
+      }
+      
+      const monitor = await currentMonitor().catch(() => null);
+      if (monitor) {
+        const workArea = monitor.workArea || { position: { x: 0, y: 0 }, size: monitor.size };
+        const scaleFactor = monitor.scaleFactor || 1;
+        
+        const workWidthLogical = workArea.size.width / scaleFactor;
+        const workHeightLogical = workArea.size.height / scaleFactor;
+        const workXLogical = workArea.position.x / scaleFactor;
+        const workYLogical = workArea.position.y / scaleFactor;
+        
+        const x = workXLogical + workWidthLogical - ASSISTANT_WIDTH - MARGIN_RIGHT;
+        const y = workYLogical + workHeightLogical - ASSISTANT_HEIGHT - MARGIN_BOTTOM;
+        
+        await assistant.setSize(new LogicalSize(ASSISTANT_WIDTH, ASSISTANT_HEIGHT)).catch(() => {});
+        await assistant.setPosition(new LogicalPosition(x, y)).catch(() => {});
+      }
+      
+      await assistant.setAlwaysOnTop(true).catch(() => {});
+      await assistant.unminimize().catch(() => {});
+      await assistant.show().catch(() => {});
+      await assistant.setFocus().catch(() => {});
+      
+      // Emit event to assistant window to wake it up
+      await assistant.emit("wake-assistant").catch(() => {});
+    } catch (err) {
+      console.error("Failed to show assistant window:", err);
+    }
+  }, []);
+
   // Wake word detection (from useVoice)
   const handleWake = useCallback(() => {
-    voiceConv.playGreetingAndListen();
-  }, [voiceConv]);
+    if (document.hasFocus()) {
+      console.log("[App] Foreground wake-word. Playing greeting centered...");
+      voiceConv.playGreetingAndListen();
+    } else {
+      console.log("[App] Background wake-word. Showing assistant window...");
+      showAssistantWindow();
+    }
+  }, [voiceConv, showAssistantWindow]);
 
   // When batch ASR transcription completes, start streaming conversation
   const handleVoiceCommand = useCallback(
