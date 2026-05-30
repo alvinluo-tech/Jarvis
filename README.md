@@ -1,160 +1,139 @@
-# 🪐 Jarvis | Personal AI Command Center
-
 <div align="center">
 
-**A secure, blazing-fast, and synced personal AI control layer. Built with Tauri 2.0 and Hono, unifying your conversations, tasks, readings, and daily memories into a single, cohesive interface.**
+<img src=".github/logo.png" alt="Jarvis" width="96" height="96" />
 
-[![Language](https://img.shields.io/badge/Language-English%20%7C%20%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-blue.svg)](#-)
-[![Tauri](https://img.shields.io/badge/Tauri-2.0-blue?logo=tauri&logoColor=white&color=FFC130)](https://tauri.app/)
-[![React](https://img.shields.io/badge/React-19.0-blue?logo=react&logoColor=white&color=61DAFB)](https://react.dev/)
-[![Hono](https://img.shields.io/badge/Hono-4.7-orange?logo=hono&logoColor=white&color=E36049)](https://hono.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+# Jarvis
 
-[🌐 English Edition](./README.md) | [🇨🇳 简体中文](./README_zh.md)
+**Personal AI Command Center**
+
+A secure, fast, and synced personal AI control layer built with Tauri 2.0 and Hono. Unifying conversations, tasks, readings, and daily memories into a single, cohesive interface.
+
+[![Tauri 2.0](https://img.shields.io/badge/Tauri-2.0-FFC130?logo=tauri&logoColor=white)](https://tauri.app/)
+[![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+[English](./README.md) | [简体中文](./README_zh.md)
 
 </div>
 
 ---
 
-## 👁️ Core Vision
+## Vision
 
-**Jarvis** is more than just an AI assistant—it is the **unified brain** of your digital workspace. By tightly binding AI Tool Calling with your personal context databases, Jarvis bridges the gap between chat, task management, reading logs, and performance reviews.
+Jarvis is more than an AI assistant — it is the **unified brain** of your digital workspace. By binding AI Tool Calling with personal context databases, Jarvis bridges the gap between chat, task management, reading logs, and performance reviews.
 
-Whether you prefer a zero-config, ultra-private **local-first experience**, or require seamless **cloud synchronization** across multiple devices, Jarvis's dynamic database-switching architecture accommodates your needs effortlessly.
+Whether you prefer a zero-config, private **local-first experience**, or seamless **cloud synchronization** across devices, Jarvis's dynamic database-switching architecture adapts to your needs.
 
----
+## Features
 
-## ✨ Features
+**Tauri 2.0 Desktop** — Ultra-lightweight client with near-zero memory footprint and native OS integration.
 
-- 🖥️ **Tauri 2.0 Powered**: An ultra-lightweight desktop client with near-zero memory footprint and gorgeous native OS window integration (featuring custom glassmorphism title bars).
-- 🔀 **3-in-1 Storage Factory**:
-  - **Local SQLite**: Zero-configuration, offline-first database keeping your data entirely in your hands.
-  - **External Supabase**: Multi-device enterprise-grade cloud synchronization enabled in one click.
-  - **General PostgreSQL**: Complete compatibility with AWS RDS, Neon.tech, Aiven, or any self-hosted PostgreSQL database.
-- ⚡ **Hot-swapping & Online Migrations**: Seamlessly switch databases in real-time without restarting the client. Perform dynamic connection tests and automatically run DDL migrations to initialize all required database schemas in one click.
-- 🧠 **Multi-Provider Stream Engine**: Native support for Server-Sent Events (SSE) streaming, context-aware tool invocation, and natural language command parsing. Fully compatible with **DeepSeek**, **Kimi**, **OpenRouter**, and other major LLMs.
-- 🧹 **Windows Developer Daemon Utilities**: Built-in scripts to terminate zombie processes and release locked file resources, eliminating the typical `os error 5 (Access Denied)` locks on Windows systems.
+**3-in-1 Storage Factory**
+- Local SQLite — zero-config, offline-first, data stays in your hands
+- External Supabase — one-click multi-device cloud sync
+- General PostgreSQL — compatible with AWS RDS, Neon.tech, Aiven, or any self-hosted instance
 
----
+**Hot-swapping & Online Migrations** — Switch databases in real-time without restarting. Run DDL migrations automatically.
 
-## 🏗️ Architecture
+**Multi-Provider Stream Engine** — SSE streaming, context-aware tool invocation, natural language parsing. Supports DeepSeek, Kimi, OpenRouter, and any OpenAI-compatible provider.
+
+**Model Marketplace** — Dynamic provider registration with preset catalog (OpenAI, Anthropic, Google, DeepSeek, Groq, Qwen, OpenRouter, Ollama). Add any custom OpenAI-compatible endpoint via UI.
+
+## Architecture
 
 ```mermaid
 graph TD
-    Client[Tauri 2.0 Desktop - React/TS] <-->|IPC / HTTP| Daemon[Hono Daemon Server - Node.js]
-    Daemon <-->|Multi-Model Gateway| LLM[LLM Agent Layer - DeepSeek/Kimi/OpenRouter]
+    Client[Tauri 2.0 Desktop] <-->|IPC / HTTP| Daemon[Hono Daemon Server]
+    Daemon <-->|Multi-Model Gateway| LLM[LLM Agent Layer]
     
-    subgraph Storage Factory Layer
+    subgraph Storage Factory
         Daemon <-->|Drizzle ORM| SQLite[(Local SQLite)]
-        Daemon <-->|Drizzle ORM / pg| Postgres[(General PostgreSQL)]
-        Daemon <-->|Drizzle ORM / Supabase SDK| Supabase[(External Supabase)]
+        Daemon <-->|Drizzle ORM / pg| Postgres[(PostgreSQL)]
+        Daemon <-->|Drizzle ORM / Supabase SDK| Supabase[(Supabase)]
     end
 ```
 
----
+## Modules
 
-## 📅 System Modules
+| Module | Description |
+|:---|:---|
+| **Chat** | Streaming conversation with contextual memory and tool execution. |
+| **Todo** | Smart task manager with priority, due dates, tags, and natural language creation. |
+| **Reading** | Book/article tracking with AI-generated abstracts and progress gauges. |
+| **Review** | Daily/weekly insights with completion metrics and automated summaries. |
+| **Database** | Storage control panel — test connectivity, migrate schemas, hot-swap engines. |
+| **Models** | Model marketplace — manage providers, discover models, configure routing rules. |
 
-| Module | Emojis | Core Description |
-| :--- | :---: | :--- |
-| **Chat** | `💬` | Conversational interface supporting streaming, contextual memory retrieval, and tool executions. |
-| **Todo** | `📅` | Smart task manager supporting priority sorting, due dates, categories, and natural language creation. |
-| **Reading** | `📖` | Curate and track your book/article queues with AI-generated abstracts and reading progress gauges. |
-| **Review** | `📊` | Weekly/daily insights showing system metrics, task completion records, and automated review summaries. |
-| **Database** | `🔧` | **Storage Control Panel**. Test connectivity, migrate schemas, and hot-swap storage engines instantly. |
+## Getting Started
 
----
+### Prerequisites
 
-## 🚀 Getting Started
+- Node.js >= 20.0.0
+- pnpm >= 9.0.0
+- Rust (latest stable, for Tauri)
 
-### 📋 Prerequisites
-- **Node.js**: `>= 20.0.0`
-- **pnpm**: `>= 9.0.0`
-- **Rust**: Latest stable Rust package manager (for Tauri compilation)
+### Install
 
-### 1. Clone & Install Dependencies
 ```bash
 git clone https://github.com/your-username/Jarvis.git
 cd Jarvis
 pnpm install
 ```
 
-### 2. Configure Environment Variables
-Create a `.env` file in the root workspace (or copy `.env.example`):
+### Configure
+
+Create `.env` in the root (or copy `.env.example`):
+
 ```properties
-# AI Configuration
 AI_PROVIDER=deepseek
 AI_MODEL=deepseek-chat
 MIMO_API_KEY=your_key_here
-
-# Daemon Port
 DAEMON_PORT=3001
-
-# SQLite Database Location
 SQLITE_DB_PATH=./daemon/data/jarvis.db
 ```
 
-### 3. Start Development Mode
+### Run
+
 ```bash
 pnpm dev
 ```
-This command runs the **Hono Daemon Server** and the **Tauri Desktop Window** concurrently.
 
----
+Starts the Hono daemon and Tauri desktop window concurrently.
 
-## 🛠️ Developer Utility Scripts
+## Developer Scripts
 
-To resolve Windows file lock warnings (`os error 5: Access Denied`) when restarting builds, you can invoke the following root scripts:
+For Windows file-lock issues (`os error 5: Access Denied`):
 
-* **Clean Desktop Client Zombie Processes**:
-  ```bash
-  pnpm clean:app
-  ```
-* **Release Backend Daemon Port (3001)**:
-  ```bash
-  pnpm clean:daemon
-  ```
-* **Clean Both (Recommended)**:
-  ```bash
-  pnpm clean:all
-  ```
-
----
-
-## 📂 Project Structure
-
-```text
-Jarvis/
-├── daemon/               # Node.js backend supervisor (Hono framework)
-│   ├── src/
-│   │   ├── api/          # REST API endpoints
-│   │   ├── db/           # Database persistent stores & Repository patterns
-│   │   ├── config/       # Env validation schemas and persist config
-│   │   └── index.ts      # Hono daemon launcher
-│   └── data/             # Local SQLite binary location
-├── frontend/             # Tauri 2.0 Webview Client (Vite + React)
-│   ├── src/
-│   │   ├── components/   # High-quality custom UI components (TitleBar, DbPage, etc.)
-│   │   ├── stores/       # Zustand global stores
-│   │   └── main.tsx      # React DOM bootstrap
-│   ├── src-tauri/        # Rust source code
-│   │   ├── icons/        # Automatic platform-adapted application icons (52 sizes)
-│   │   └── src/lib.rs    # Tauri command registers and webview windows
-│   └── public/           # Static asset served at web root
-└── package.json          # Root Monorepo and pipeline clean configurations
+```bash
+pnpm clean:app     # Kill desktop client zombie processes
+pnpm clean:daemon   # Release port 3001
+pnpm clean:all      # Both (recommended)
 ```
 
----
+## Project Structure
 
-## 📄 License
+```
+Jarvis/
+├── daemon/               # Node.js backend (Hono)
+│   ├── src/
+│   │   ├── api/          # REST API endpoints
+│   │   ├── db/           # Database stores & repository pattern
+│   │   ├── config/       # Env validation & persistent config
+│   │   └── index.ts      # Entry point
+│   └── data/             # Local SQLite storage
+├── frontend/             # Tauri 2.0 client (Vite + React)
+│   ├── src/
+│   │   ├── components/   # UI components
+│   │   ├── stores/       # Zustand state management
+│   │   └── main.tsx      # React entry
+│   ├── src-tauri/        # Rust native code
+│   │   ├── icons/        # Platform-adapted app icons
+│   │   └── src/lib.rs    # Tauri commands & window setup
+│   └── public/           # Static assets
+└── package.json          # Monorepo root config
+```
 
-This project is licensed under the [MIT License](LICENSE).
+## License
 
----
-
-<div align="center">
-
-**🪐 Jarvis - Handcrafted to bring structure, elegance, and intelligence to your digital life.**
-
-</div>
+[MIT](LICENSE)
