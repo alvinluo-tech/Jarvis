@@ -111,7 +111,7 @@ export function ChatPanel({ messages, onSend, isLoading, hasActiveConversation, 
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-gradient-to-b from-indigo-500/[0.015] via-transparent to-transparent">
       {/* Messages area with scroll-to-bottom overlay */}
       <div className="flex-1 overflow-hidden relative">
         <div ref={scrollRef} className="h-full overflow-y-auto p-4 space-y-4">
@@ -121,8 +121,8 @@ export function ChatPanel({ messages, onSend, isLoading, hasActiveConversation, 
 
           {/* Voice conversation: user message */}
           {voiceUserText && (
-            <div className="flex justify-end">
-              <div className="bg-primary text-primary-foreground rounded-lg px-4 py-2 text-sm max-w-[80%]">
+            <div className="flex justify-end my-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="bg-gradient-to-br from-indigo-600 to-blue-600 dark:from-indigo-500 dark:to-blue-600 text-primary-foreground border border-primary/20 rounded-2xl rounded-tr-sm px-4 py-3 text-sm max-w-[80%] shadow-[0_4px_12px_rgba(99,102,241,0.15)]">
                 {voiceUserText}
               </div>
             </div>
@@ -130,12 +130,12 @@ export function ChatPanel({ messages, onSend, isLoading, hasActiveConversation, 
 
           {/* Voice conversation: AI response (visible until persisted messages load) */}
           {voiceAssistantText && (
-            <div className="flex justify-start">
-              <div className="bg-secondary text-secondary-foreground rounded-lg px-4 py-2 text-sm max-w-[80%]">
+            <div className="flex justify-start my-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="bg-card/60 backdrop-blur-md text-card-foreground border border-border/60 rounded-2xl rounded-tl-sm px-4 py-3.5 text-sm max-w-[80%] hover:shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:hover:shadow-[0_4px_20px_rgba(0,0,0,0.15)]">
                 <Streamdown
                   mode={isVoiceStreaming ? "streaming" : "static"}
                   parseIncompleteMarkdown
-                  className="prose prose-sm dark:prose-invert max-w-none"
+                  className="prose prose-sm dark:prose-invert max-w-none text-foreground/90"
                 >
                   {voiceAssistantText}
                 </Streamdown>
@@ -148,14 +148,19 @@ export function ChatPanel({ messages, onSend, isLoading, hasActiveConversation, 
 
           {isLoading && (
             <div className="flex justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <div className="rounded-xl border border-cyan-500/15 bg-cyan-950/10 px-4 py-3 space-y-2 max-w-[80%] shadow-lg shadow-cyan-950/5">
+              <div className="rounded-xl border border-cyan-500/25 bg-cyan-950/5 backdrop-blur-md px-4.5 py-3.5 space-y-2.5 max-w-[80%] shadow-lg shadow-cyan-950/5 relative overflow-hidden">
+                {/* Glowing neon cyber line */}
+                <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent" />
                 <div className="flex items-center gap-2">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin text-cyan-400" />
-                  <span className="font-mono text-xs font-bold text-cyan-400 tracking-wider">
+                  <div className="relative flex items-center justify-center">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-cyan-400" />
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-20"></span>
+                  </div>
+                  <span className="font-mono text-[10px] font-bold text-cyan-400/90 tracking-wider">
                     JARVIS COGNITIVE DECRYPTING...
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5 pl-5">
+                <div className="flex items-center gap-1.5 pl-5.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: "0ms" }} />
                   <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: "150ms" }} />
                   <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: "300ms" }} />
@@ -179,7 +184,7 @@ export function ChatPanel({ messages, onSend, isLoading, hasActiveConversation, 
               scrollToBottom("smooth");
               setHasNewMessage(false);
             }}
-            className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-4 py-2 rounded-full bg-background border border-border hover:bg-accent shadow-xl text-xs font-mono font-bold tracking-wider text-muted-foreground hover:text-foreground transition-all duration-300 transform scale-100 hover:scale-105 active:scale-95 animate-in fade-in slide-in-from-bottom-3 cursor-pointer group"
+            className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-4 py-2 rounded-full bg-background/80 backdrop-blur-md border border-border/60 hover:bg-background/95 hover:border-border shadow-lg hover:shadow-xl text-[11px] font-mono font-bold tracking-wider text-muted-foreground hover:text-foreground transition-all duration-300 transform scale-100 hover:scale-105 active:scale-95 animate-in fade-in slide-in-from-bottom-3 cursor-pointer group"
             title="回到底部"
           >
             <ArrowDown className="h-3.5 w-3.5 group-hover:translate-y-0.5 transition-transform duration-200" />
