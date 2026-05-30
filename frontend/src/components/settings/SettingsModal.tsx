@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { MCPSettings } from "./MCPSettings";
+import { DbManager } from "./DbManager";
 import {
   Database,
   Cloud,
@@ -17,6 +18,7 @@ import {
   ListTodo,
   BookOpen,
   RefreshCw,
+  Layers,
 } from "lucide-react";
 
 interface SettingsModalProps {
@@ -24,7 +26,7 @@ interface SettingsModalProps {
   onClose: () => void;
 }
 
-type SettingsTab = "storage" | "mcp";
+type SettingsTab = "storage" | "mcp" | "dbManager";
 
 export function SettingsModal({ open, onClose }: SettingsModalProps) {
   const {
@@ -55,7 +57,12 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
 
   return (
     <Dialog open={open} onClose={onClose}>
-      <DialogContent onClose={onClose} className="relative max-w-2xl">
+      <DialogContent
+        onClose={onClose}
+        className={`relative transition-all duration-300 ${
+          activeTab === "dbManager" ? "max-w-4xl" : "max-w-2xl"
+        }`}
+      >
         <DialogHeader>
           <DialogTitle>设置</DialogTitle>
           <DialogDescription>配置 Jarvis 的存储和连接</DialogDescription>
@@ -84,6 +91,17 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
           >
             <Plug className="h-4 w-4" />
             MCP & 模型
+          </button>
+          <button
+            onClick={() => setActiveTab("dbManager")}
+            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors ${
+              activeTab === "dbManager"
+                ? "bg-background shadow-sm font-medium"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Layers className="h-4 w-4" />
+            数据管理
           </button>
         </div>
 
@@ -252,6 +270,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
         )}
 
         {activeTab === "mcp" && <MCPSettings className="max-h-[60vh] overflow-y-auto pr-1" />}
+        {activeTab === "dbManager" && <DbManager className="max-h-[65vh] overflow-y-auto pr-1" />}
       </DialogContent>
     </Dialog>
   );

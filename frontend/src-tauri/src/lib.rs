@@ -439,6 +439,27 @@ async fn get_db_stats() -> Result<serde_json::Value, String> {
     daemon_get("/api/settings/db-stats").await
 }
 
+#[tauri::command]
+async fn db_manager_list_tables() -> Result<serde_json::Value, String> {
+    daemon_get("/api/settings/db-manager/tables").await
+}
+
+#[tauri::command]
+async fn db_manager_get_table_rows(table_name: String) -> Result<serde_json::Value, String> {
+    daemon_get(&format!("/api/settings/db-manager/tables/{}", table_name)).await
+}
+
+#[tauri::command]
+async fn db_manager_delete_row(table_name: String, id: String) -> Result<serde_json::Value, String> {
+    daemon_delete(&format!("/api/settings/db-manager/tables/{}/{}", table_name, id)).await
+}
+
+#[tauri::command]
+async fn db_manager_clear_table(table_name: String) -> Result<serde_json::Value, String> {
+    daemon_post(&format!("/api/settings/db-manager/tables/{}/clear", table_name), serde_json::json!({})).await
+}
+
+
 
 async fn daemon_put<T: for<'de> Deserialize<'de>>(path: &str, body: serde_json::Value) -> Result<T, String> {
     let client = reqwest::Client::new();
@@ -702,6 +723,10 @@ pub fn run() {
             get_settings,
             update_storage_mode,
             get_db_stats,
+            db_manager_list_tables,
+            db_manager_get_table_rows,
+            db_manager_delete_row,
+            db_manager_clear_table,
             get_voice_status,
             get_daemon_url_command,
             list_mcp_servers,

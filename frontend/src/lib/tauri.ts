@@ -218,6 +218,30 @@ export async function getDbStats(): Promise<DbStats> {
   return invoke("get_db_stats");
 }
 
+export interface DbTableInfo {
+  id: string;
+  name: string;
+  description: string;
+  count: number;
+}
+
+export async function dbManagerListTables(): Promise<{ success: boolean; tables: DbTableInfo[] }> {
+  return invoke("db_manager_list_tables");
+}
+
+export async function dbManagerGetTableRows(tableName: string): Promise<{ success: boolean; rows: any[] }> {
+  return invoke("db_manager_get_table_rows", { tableName });
+}
+
+export async function dbManagerDeleteRow(tableName: string, id: string): Promise<{ success: boolean; deleted: boolean }> {
+  return invoke("db_manager_delete_row", { tableName, id });
+}
+
+export async function dbManagerClearTable(tableName: string): Promise<{ success: boolean; message: string }> {
+  return invoke("db_manager_clear_table", { tableName });
+}
+
+
 
 // ---- Voice ----
 

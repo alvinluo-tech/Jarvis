@@ -100,6 +100,135 @@ app.get("/db-stats", async (c) => {
   }
 });
 
+// ---- Database Manager Endpoints ----
+
+app.get("/db-manager/tables", async (c) => {
+  try {
+    const repos = getRepositories();
+    const conversations = await repos.conversations.list();
+    const tasks = await repos.tasks.query();
+    const articles = await repos.articles.list();
+    const memories = await repos.memories.getAll();
+
+    return c.json({
+      success: true,
+      tables: [
+        {
+          id: "conversations",
+          name: "会话历史 (Conversations)",
+          description: "Jarvis 与您的所有对话交互记录",
+          count: conversations.length,
+        },
+        {
+          id: "tasks",
+          name: "任务列表 (Tasks)",
+          description: "日常待办事项及执行状态跟踪记录",
+          count: tasks.length,
+        },
+        {
+          id: "articles",
+          name: "阅读文章 (Articles)",
+          description: "收藏待阅的网页文章、剪贴板记录等",
+          count: articles.length,
+        },
+        {
+          id: "memories",
+          name: "记忆胶囊 (Memories)",
+          description: "提取的结构化长期记忆和个人偏好",
+          count: memories.length,
+        },
+      ],
+    });
+  } catch (err) {
+    return c.json({ success: false, error: String(err) }, 500);
+  }
+});
+
+app.get("/db-manager/tables/:name", async (c) => {
+  try {
+    const name = c.req.param("name");
+    const repos = getRepositories();
+    let rows: unknown[] = [];
+
+    if (name === "conversations") {
+      rows = await repos.conversations.list();
+    } else if (name === "tasks") {
+      rows = await repos.tasks.query();
+    } else if (name === "articles") {
+      rows = await repos.articles.list();
+    } else if (name === "memories") {
+      rows = await repos.memories.getAll();
+    } else {
+      return c.json({ success: false, error: `不支持的表名: ${name}` }, 400);
+    }
+
+    return c.json({ success: true, rows });
+  } catch (err) {
+    return c.json({ success: false, error: String(err) }, 500);
+  }
+});
+
+app.delete("/db-manager/tables/:name/:id", async (c) => {
+  try {
+    const name = c.req.param("name");
+    const id = c.req.param("id");
+    const repos = getRepositories();
+    let success = false;
+
+    if (name === "conversations") {
+      success = await repos.conversations.delete(id);
+    } else if (name === "tasks") {
+      success = await repos.tasks.delete(id);
+    } else if (name === "articles") {
+      success = await repos.articles.delete(id);
+    } else if (name === "memories") {
+      success = await repos.memories.delete(id);
+    } else {
+      return c.json({ success: false, error: `不支持的表名: ${name}` }, 400);
+    }
+
+    return c.json({ success: true, deleted: success });
+  } catch (err) {
+    return c.json({ success: false, error: String(err) }, 500);
+  }
+});
+
+app.post("/db-manager/tables/:name/clear", async (c) => {
+  try {
+    const name = c.req.param("name");
+    const repos = getRepositories();
+
+    if (name === "conversations") {
+      const list = await repos.conversations.list();
+      for (const item of list) {
+        await repos.conversations.delete(item.id);
+      }
+    } else if (name === "tasks") {
+      const list = await repos.tasks.query();
+      for (const item of list) {
+        await repos.tasks.delete(item.id);
+      }
+    } else if (name === "articles") {
+      const list = await repos.articles.list();
+      for (const item of list) {
+        await repos.articles.delete(item.id);
+      }
+    } else if (name === "memories") {
+      const list = await repos.memories.getAll();
+      for (const item of list) {
+        await repos.memories.delete(item.id);
+      }
+    } else {
+      return c.json({ success: false, error: `不支持的表名: ${name}` }, 400);
+    }
+
+    return c.json({ success: true, message: `成功清空 ${name} 表数据` });
+  } catch (err) {
+    return c.json({ success: false, error: String(err) }, 500);
+  }
+});
+
+
 // ---- Provider Helpers ----
 
 function maskApiKey(key: string | undefined): string {

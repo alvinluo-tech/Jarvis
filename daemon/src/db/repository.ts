@@ -237,6 +237,7 @@ export interface ArticleRepository {
   list(filters?: ArticleFilters): Promise<ArticleRow[]>;
   getById(id: string): Promise<ArticleRow | null>;
   update(id: string, data: UpdateArticleData): Promise<ArticleRow>;
+  delete(id: string): Promise<boolean>;
 }
 
 export interface ReviewRepository {

@@ -95,5 +95,14 @@ export function createSupabaseArticleRepo(): ArticleRepository {
       if (error) throw new Error(`Failed to update article: ${error.message}`);
       return toArticleRow(row);
     },
+
+    async delete(id: string): Promise<boolean> {
+      const { error } = await client
+        .from(TABLE)
+        .delete()
+        .eq("id", id);
+      if (error) throw new Error(`Failed to delete article: ${error.message}`);
+      return true;
+    },
   };
 }
