@@ -14,6 +14,9 @@ import { useVoice } from "@/hooks/useVoice";
 import { useVoiceConversation } from "@/hooks/useVoiceConversation";
 import { useConversationStore } from "@/stores/conversationStore";
 import { usePaletteStore } from "@/stores/paletteStore";
+import { useTaskStore } from "@/stores/taskStore";
+import { useArticleStore } from "@/stores/articleStore";
+import { useReviewStore } from "@/stores/reviewStore";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Settings } from "lucide-react";
@@ -363,13 +366,41 @@ function App() {
     }
   }, []);
 
-  // Refresh store messages from server after voice conversation ends
+  // Refresh all dashboard and conversation states from the SQLite database
+  const fetchConversations = useConversationStore((s) => s.fetchConversations);
   const refreshMessages = useConversationStore((s) => s.refreshMessages);
+  const fetchTasks = useTaskStore((s) => s.fetchTasks);
+  const fetchArticles = useArticleStore((s) => s.fetchArticles);
+  const fetchDailySummary = useReviewStore((s) => s.fetchDailySummary);
+
+  const refreshAllDashboardStates = useCallback(async () => {
+    console.log("[App] Refreshing all dashboard states from database...");
+    try {
+      await Promise.all([
+        fetchConversations().catch(() => {}),
+        refreshMessages().catch(() => {}),
+        fetchTasks().catch(() => {}),
+        fetchArticles().catch(() => {}),
+        fetchDailySummary().catch(() => {}),
+      ]);
+    } catch (err) {
+      console.warn("Failed to refresh dashboard states:", err);
+    }
+  }, [fetchConversations, refreshMessages, fetchTasks, fetchArticles, fetchDailySummary]);
+
+  // Automatically refresh all dashboard states when text chat completes sending (and on mount)
+  useEffect(() => {
+    if (!isLoading) {
+      refreshAllDashboardStates();
+    }
+  }, [isLoading, refreshAllDashboardStates]);
+
+  // Refresh all dashboard states when voice conversation goes idle or listening
   useEffect(() => {
     if (voiceConv.state === "idle" || voiceConv.state === "listening") {
-      refreshMessages();
+      refreshAllDashboardStates();
     }
-  }, [voiceConv.state, refreshMessages]);
+  }, [voiceConv.state, refreshAllDashboardStates]);
 
   // Clear streamed voice text when persisted messages arrive from server
   useEffect(() => {
