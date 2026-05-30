@@ -1,4 +1,8 @@
 <p align="center">
+  <img src="./public/assets/icon.png" alt="CoreLayer Icon" width="96" />
+</p>
+
+<p align="center">
   <img src="./public/assets/corelayer-hero.png" alt="CoreLayer — powered by Jarvis" width="100%" />
 </p>
 
