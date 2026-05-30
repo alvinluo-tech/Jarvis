@@ -94,7 +94,7 @@ CoreLayer is the control layer between you, your tools, your models, and your pe
   </tr>
   <tr>
     <td width="50%">
-      <img src="./public/assets/icons/guard.svg" width="32" />
+      <img src="./public/assets/icons/permission-guard.png" width="32" />
       <h3>Permission Guard</h3>
       <p>Classify risky actions, pause for confirmation, and keep audit logs for every tool call.</p>
     </td>
