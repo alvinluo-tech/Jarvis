@@ -134,10 +134,7 @@ export function useVoiceConversation(
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
   const dataChannelRef = useRef<RTCDataChannel | null>(null);
   const listeningSafetyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-
-
-  const POST_LISTEN_TIMEOUT = 7000; // 7s silence → back to wake word
+  const accumulatedFinalTextRef = useRef<string>("");
 
   // Lazily get or create ASR instance, or update options if it already exists
   const getOrCreateASR = useCallback((options: any) => {
@@ -155,96 +152,60 @@ export function useVoiceConversation(
     onIdleRef.current = onIdle;
   }, [onIdle]);
 
-  // Start post-conversation listening window (7s to speak, then wake word)
+  // Start post-conversation listening window (5s to speak, then wake word)
   const startPostConversationListen = useCallback(() => {
     console.log(`[VoiceConversation] startPostConversationListen called, isActive: ${isActiveRef.current}`);
     if (isActiveRef.current) return;
-    console.log("[VoiceConversation] Starting post-conversation listen (7s window)");
+    console.log("[VoiceConversation] Starting post-conversation listen (5s window)");
+    
+    if (postListenTimerRef.current) {
+      clearTimeout(postListenTimerRef.current);
+      postListenTimerRef.current = null;
+    }
+
     isActiveRef.current = true;
     setState("listening");
     setInterimTranscript("");
     setFinalTranscript("");
 
     if (isWebSpeechASRAvailable()) {
-      let gotResult = false;
       let latestInterimText = "";
-
-      // 7s timeout — if no speech, go to wake word mode
-      postListenTimerRef.current = setTimeout(() => {
-        if (gotResult) return;
-        console.log("[VoiceConversation] Post-listen timeout (7s), checking for interim text");
-        
-        if (latestInterimText.trim()) {
-          console.log("[VoiceConversation] Post-listen timeout but got interim text, submitting:", latestInterimText);
-          gotResult = true;
-          if (webAsrRef.current) {
-            webAsrRef.current.stop();
-          }
-          isActiveRef.current = false;
-          startConversationRef.current(latestInterimText);
-          return;
-        }
-
-        if (webAsrRef.current) {
-          webAsrRef.current.stop();
-        }
-        isActiveRef.current = false;
-        playFarewellAndExitRef.current();
-      }, POST_LISTEN_TIMEOUT);
+      accumulatedFinalTextRef.current = "";
 
       const asr = getOrCreateASR({
         lang: "zh-CN",
         onInterim: (text: string) => {
-          // Refresh the post-listen safety timeout because the user is actively speaking!
-          if (postListenTimerRef.current) {
-            clearTimeout(postListenTimerRef.current);
-          }
-          postListenTimerRef.current = setTimeout(() => {
-            if (gotResult) return;
-            console.log("[VoiceConversation] Post-listen safety timeout (silence after speech) fired.");
-            if (webAsrRef.current) {
-              webAsrRef.current.stop();
-            }
-            isActiveRef.current = false;
-            playFarewellAndExitRef.current();
-          }, POST_LISTEN_TIMEOUT);
-
           setInterimTranscript(text);
           latestInterimText = text;
         },
         onFinal: (text: string) => {
-          gotResult = true;
-          if (postListenTimerRef.current) {
-            clearTimeout(postListenTimerRef.current);
-            postListenTimerRef.current = null;
-          }
-          if (webAsrRef.current) {
-            webAsrRef.current.stop();
-          }
-          isActiveRef.current = false;
-          startConversationRef.current(text);
+          accumulatedFinalTextRef.current += text;
+          setFinalTranscript(accumulatedFinalTextRef.current);
+          setInterimTranscript("");
+          latestInterimText = "";
         },
         onError: (err: string) => {
           console.warn("[VoiceConversation] Post-listen ASR error:", err);
         },
         onEnd: () => {
-          console.log("[VoiceConversation] Post-listen ASR ended, gotResult:", gotResult);
-          if (gotResult) return;
+          console.log("[VoiceConversation] Post-listen ASR ended");
           if (postListenTimerRef.current) {
             clearTimeout(postListenTimerRef.current);
             postListenTimerRef.current = null;
           }
-          if (latestInterimText.trim()) {
-            console.log("[VoiceConversation] Post-listen ASR ended but got interim text, submitting:", latestInterimText);
-            gotResult = true;
-            isActiveRef.current = false;
-            startConversationRef.current(latestInterimText);
+          
+          const textToSubmit = (accumulatedFinalTextRef.current + latestInterimText).trim();
+          
+          isActiveRef.current = false;
+          if (textToSubmit) {
+            console.log("[VoiceConversation] Post-listen submitting accumulated text:", textToSubmit);
+            startConversationRef.current(textToSubmit);
           } else {
-            isActiveRef.current = false;
+            console.log("[VoiceConversation] Post-listen no speech detected, exiting...");
             playFarewellAndExitRef.current();
           }
         },
-        silenceTimeout: POST_LISTEN_TIMEOUT,
+        silenceTimeout: 5000,
       });
       asr.start();
     } else {
@@ -1076,43 +1037,46 @@ export function useVoiceConversation(
     }, 5000);
 
     if (isWebSpeechASRAvailable()) {
-      let gotFinalResult = false;
       let latestInterimText = "";
+      accumulatedFinalTextRef.current = "";
 
       const asr = getOrCreateASR({
         lang: "zh-CN",
         onInterim: (text: string) => {
-          setInterimTranscript(text);
-          latestInterimText = text;
-        },
-        onFinal: (text: string) => {
-          gotFinalResult = true;
           if (listeningSafetyTimerRef.current) {
             clearTimeout(listeningSafetyTimerRef.current);
             listeningSafetyTimerRef.current = null;
           }
-          if (webAsrRef.current) {
-            webAsrRef.current.stop();
+          setInterimTranscript(text);
+          latestInterimText = text;
+        },
+        onFinal: (text: string) => {
+          if (listeningSafetyTimerRef.current) {
+            clearTimeout(listeningSafetyTimerRef.current);
+            listeningSafetyTimerRef.current = null;
           }
-          isActiveRef.current = false;
-          startConversation(text);
+          accumulatedFinalTextRef.current += text;
+          setFinalTranscript(accumulatedFinalTextRef.current);
+          setInterimTranscript("");
+          latestInterimText = "";
         },
         onError: (err: string) => {
           console.warn("[VoiceConversation] ASR error:", err);
         },
         onEnd: () => {
+          console.log("[VoiceConversation] ASR onEnd called");
           if (listeningSafetyTimerRef.current) {
             clearTimeout(listeningSafetyTimerRef.current);
             listeningSafetyTimerRef.current = null;
           }
-          if (gotFinalResult) return;
-          if (latestInterimText.trim()) {
-            console.log("[VoiceConversation] Silence timeout but got interim text, submitting:", latestInterimText);
-            gotFinalResult = true;
-            isActiveRef.current = false;
-            startConversation(latestInterimText);
+          
+          const textToSubmit = (accumulatedFinalTextRef.current + latestInterimText).trim();
+          console.log("[VoiceConversation] ASR finished. Text to submit:", textToSubmit);
+          
+          isActiveRef.current = false;
+          if (textToSubmit) {
+            startConversation(textToSubmit);
           } else {
-            isActiveRef.current = false;
             playFarewellAndExitRef.current();
           }
         },
@@ -1234,6 +1198,7 @@ export function useVoiceConversation(
     setState("idle");
     setInterimTranscript("");
     setFinalTranscript("");
+    accumulatedFinalTextRef.current = "";
     setAssistantText("");
     setLastError(null);
   }, [cleanup]);
@@ -1254,10 +1219,11 @@ export function useVoiceConversation(
     setState("listening");
     setAssistantText("");
     setInterimTranscript("");
+    setFinalTranscript("");
 
     if (isWebSpeechASRAvailable()) {
-      let gotFinalResult = false;
       let latestInterimText = "";
+      accumulatedFinalTextRef.current = "";
 
       const asr = getOrCreateASR({
         lang: "zh-CN",
@@ -1266,22 +1232,20 @@ export function useVoiceConversation(
           latestInterimText = text;
         },
         onFinal: (text: string) => {
-          gotFinalResult = true;
-          if (webAsrRef.current) {
-            webAsrRef.current.stop();
-          }
-          isActiveRef.current = false;
-          startConversation(text);
+          accumulatedFinalTextRef.current += text;
+          setFinalTranscript(accumulatedFinalTextRef.current);
+          setInterimTranscript("");
+          latestInterimText = "";
         },
         onEnd: () => {
-          if (gotFinalResult) return;
-          if (latestInterimText.trim()) {
-            console.log("[VoiceConversation:BargeIn] Silence timeout but got interim text, submitting:", latestInterimText);
-            gotFinalResult = true;
-            isActiveRef.current = false;
-            startConversation(latestInterimText);
+          console.log("[VoiceConversation:BargeIn] ASR onEnd called");
+          const textToSubmit = (accumulatedFinalTextRef.current + latestInterimText).trim();
+          console.log("[VoiceConversation:BargeIn] Text to submit:", textToSubmit);
+          
+          isActiveRef.current = false;
+          if (textToSubmit) {
+            startConversation(textToSubmit);
           } else {
-            isActiveRef.current = false;
             playFarewellAndExitRef.current();
           }
         },
@@ -1295,7 +1259,7 @@ export function useVoiceConversation(
     if (state !== "listening") return;
     console.log("[VoiceConversation] finishListening called, stopping ASR and submitting current transcripts...");
     
-    const textToSubmit = (interimTranscript || finalTranscript || "").trim();
+    const textToSubmit = (accumulatedFinalTextRef.current + interimTranscript).trim();
     
     if (webAsrRef.current) {
       webAsrRef.current.stop();
@@ -1316,7 +1280,7 @@ export function useVoiceConversation(
     } else {
       playFarewellAndExitRef.current();
     }
-  }, [state, interimTranscript, finalTranscript, startConversation]);
+  }, [state, interimTranscript, startConversation]);
 
   const handleWindowBlur = useCallback(() => {
     console.log("[VoiceConversation] handleWindowBlur called. Stopping physical WebSpeech ASR...");
