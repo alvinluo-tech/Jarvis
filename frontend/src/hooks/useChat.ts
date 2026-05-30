@@ -30,6 +30,7 @@ export function useChat() {
     isSending,
     activeConversationId,
     createConversation,
+    getOrCreateDefaultConversation,
     error,
     setMessages,
     setIsSending,
@@ -48,10 +49,10 @@ export function useChat() {
       let conversationId = activeConversationId;
       if (!conversationId) {
         try {
-          const conversation = await createConversation();
+          const conversation = await getOrCreateDefaultConversation();
           conversationId = conversation.id;
         } catch (err) {
-          console.error("Failed to create conversation:", err);
+          console.error("Failed to get or create default conversation:", err);
           return;
         }
       }

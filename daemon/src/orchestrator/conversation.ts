@@ -215,7 +215,7 @@ export async function handleMessageInConversation(
 
   if (isAiConfigured()) {
     const messages: ModelMessage[] = [
-      { role: "system", content: buildSystemPrompt() },
+      { role: "system", content: buildSystemPrompt("text", conversationId) },
       ...recentHistory.map((msg) => ({
         role: msg.role as "user" | "assistant",
         content: msg.content,
@@ -314,7 +314,7 @@ export async function streamMessageInConversation(
 
   if (isAiConfigured()) {
     const messages: ModelMessage[] = [
-      { role: "system", content: buildSystemPrompt() },
+      { role: "system", content: buildSystemPrompt("text", conversationId) },
       ...recentHistory.map((msg) => ({
         role: msg.role as "user" | "assistant",
         content: msg.content,
@@ -352,11 +352,11 @@ export async function streamMessageInConversation(
   }
 }
 
-export function streamChat(messages: ModelMessage[], mode: "text" | "voice" = "text"): any {
+export function streamChat(messages: ModelMessage[], mode: "text" | "voice" = "text", conversationId?: string): any {
   try {
     return streamText({
       model: getModel(),
-      system: buildSystemPrompt(mode),
+      system: buildSystemPrompt(mode, conversationId),
       messages,
       tools: getAllTools(),
       stopWhen: stepCountIs(5),

@@ -7,6 +7,7 @@ import { getStorageMode } from "./config/storage-config.js";
 import { registerTodoTools } from "./tools/todo/connector.js";
 import { registerReadingTools } from "./tools/reading/connector.js";
 import { registerReviewTools } from "./tools/review/connector.js";
+import { registerConversationTools } from "./tools/conversation/connector.js";
 import { logError } from "./utils/errors.js";
 import { registerAllAdapters } from "./mcp/adapters/index.js";
 import conversationRoutes from "./api/conversations.js";
@@ -27,6 +28,7 @@ initializeRepositories(storageMode);
 registerTodoTools();
 registerReadingTools();
 registerReviewTools();
+registerConversationTools();
 registerAllAdapters();
 
 const app = new Hono();

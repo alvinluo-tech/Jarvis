@@ -135,7 +135,7 @@ voiceRoutes.post("/converse-stream", async (c) => {
     return c.json({ error: `Failed to initialize conversation: ${message}` }, 500);
   }
 
-  const result = streamChat(messages, "voice");
+  const result = streamChat(messages, "voice", conversationId);
 
   return streamSSE(c, async (sseStream) => {
     let fullText = "";

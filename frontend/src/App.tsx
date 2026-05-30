@@ -147,7 +147,7 @@ function App() {
       />
     );
   }
-  const { messages, sendMessage, isLoading, activeConversationId, error, startNewChat } = useChat();
+  const { messages, sendMessage, isLoading, activeConversationId, error } = useChat();
   const [isMainWindowFocused, setIsMainWindowFocused] = useState(true);
   const [currentView, setCurrentView] = useState<"main" | "control-center">("main");
   const [initialControlPage, setInitialControlPage] = useState<ControlPage>("overview");
@@ -183,11 +183,13 @@ function App() {
     }, 500);
   }, []);
 
+  const getOrCreateDefaultConversation = useConversationStore((s) => s.getOrCreateDefaultConversation);
+
   // Streaming voice conversation (primary)
   const voiceConv = useVoiceConversation(
     activeConversationId,
     handleConversationIdle,
-    startNewChat,
+    getOrCreateDefaultConversation,
   );
 
   // Keep voiceConv ref in sync to avoid stale closures in focus handler timeouts

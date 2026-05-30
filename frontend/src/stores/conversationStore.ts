@@ -12,6 +12,7 @@ interface ConversationState {
 
   fetchConversations: () => Promise<void>;
   createConversation: (title?: string) => Promise<Conversation>;
+  getOrCreateDefaultConversation: () => Promise<Conversation>;
   selectConversation: (id: string) => Promise<void>;
   deleteConversation: (id: string) => Promise<void>;
   renameConversation: (id: string, title: string) => Promise<void>;
@@ -36,7 +37,15 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const conversations = await tauri.listConversations();
-      set({ conversations, isLoading: false });
+      set((state) => {
+        const activeExists = conversations.some((c) => c.id === state.activeConversationId);
+        return {
+          conversations,
+          isLoading: false,
+          activeConversationId: activeExists ? state.activeConversationId : null,
+          messages: activeExists ? state.messages : [],
+        };
+      });
     } catch (error) {
       set({ error: String(error), isLoading: false });
     }
@@ -55,6 +64,32 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
       return conversation;
     } catch (error) {
       set({ error: String(error), isLoading: false });
+      throw error;
+    }
+  },
+
+  getOrCreateDefaultConversation: async () => {
+    const { conversations } = get();
+    const defaultConv = conversations.find((c) => c.title === "默认对话");
+    if (defaultConv) {
+      set({ activeConversationId: defaultConv.id });
+      try {
+        const { messages } = await tauri.getConversation(defaultConv.id);
+        set({ messages });
+      } catch {}
+      return defaultConv;
+    }
+
+    try {
+      const conversation = await tauri.createConversation("默认对话");
+      set((state) => ({
+        conversations: [conversation, ...state.conversations],
+        activeConversationId: conversation.id,
+        messages: [],
+      }));
+      return conversation;
+    } catch (error) {
+      set({ error: String(error) });
       throw error;
     }
   },
@@ -100,16 +135,12 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
   sendMessage: async (content: string) => {
     const { activeConversationId } = get();
 
-    // Auto-create conversation if none active
+    // Auto-create/retrieve default conversation if none active
     let conversationId = activeConversationId;
     if (!conversationId) {
       try {
-        const conversation = await tauri.createConversation();
+        const conversation = await get().getOrCreateDefaultConversation();
         conversationId = conversation.id;
-        set((state) => ({
-          conversations: [conversation, ...state.conversations],
-          activeConversationId: conversation.id,
-        }));
       } catch (error) {
         set({ error: String(error) });
         return null;

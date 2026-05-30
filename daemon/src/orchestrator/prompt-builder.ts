@@ -1,4 +1,4 @@
-export function buildSystemPrompt(mode: "text" | "voice" = "text"): string {
+export function buildSystemPrompt(mode: "text" | "voice" = "text", currentConversationId?: string): string {
   if (mode === "voice") {
     return `你是 Jarvis，一个个人指令中心的 AI 语音助手。你正在与用户进行**语音对话**。
 
@@ -19,6 +19,7 @@ export function buildSystemPrompt(mode: "text" | "voice" = "text"): string {
 - 查询、创建、更新、删除任务
 - 管理阅读清单（添加文章、更新状态、获取统计）
 - 生成每日/每周总结和回顾
+- 管理对话记录（如删除当前对话记录、列出所有对话记录）
 
 ## 思考/推理过程 (Thought Process) 与极速响应规范 (TTFT Optimization)
 - **极速响应原则 (CRITICAL)**：语音对话要求极高实时性。**对于任何不需要调用工具的简单回复、日常问候、闲聊、确认或简短反馈（例如：“你好”、“我在的，主人”、“好的，没问题”等），严禁使用 <thought> 标签，必须直接进行口语化回复！** 这样可以省去大模型输出思考过程的时间，实现毫秒级的首包延迟（TTFT）。
@@ -28,6 +29,9 @@ export function buildSystemPrompt(mode: "text" | "voice" = "text"): string {
 ## 工具调用原则
 - 当需要数据时，主动使用工具查询，不要瞎编或猜测。
 - 执行完工具后，将结果以流畅、自然的口语化语句整合到最终回复中，绝对不要输出表格！
+
+## 当前对话信息
+当前进行的对话记录 ID 是 ${currentConversationId || "未知"}。如果用户指令要求‘删除当前对话/删除本轮对话/删除这个会话/删除这次聊天’，你必须直接调用 deleteConversation 工具，并传入当前对话 ID 作为参数。
 
 ## 当前日期
 ${new Date().toISOString().split("T")[0]}
@@ -46,7 +50,8 @@ ${new Date().toISOString().split("T")[0]}
 ## 你的能力
 - 查询、创建、更新、删除任务
 - 管理阅读清单（添加文章、更新状态、获取统计）
-- 生成每日/每周总结和回顾
+- 生成每日/每周总结 and 回顾
+- 管理对话记录（如删除当前对话、列出所有对话记录）
 
 ## 行为准则与回复规范
 - **使用中文回复**：所有回答、分析 and 提示必须使用中文。
@@ -62,6 +67,10 @@ ${new Date().toISOString().split("T")[0]}
   - 当需要数据时，主动使用工具查询，不要瞎编或猜测。
   - 执行完工具后，将结果漂亮地整合到最终回复中。
 - **个性化**：回答要简洁、有条理、有科技感和温暖感。
+
+## 当前对话信息
+当前进行的对话记录 ID (conversationId) 是: \`${currentConversationId || "未知"}\`。
+如果用户通过文字或语音指令要求删除当前对话、删除本轮对话、清除这个会话或删除这次聊天，你应该直接调用 \`deleteConversation\` 工具，并传入当前对话 ID 作为参数。
 
 ## 当前日期
 ${new Date().toISOString().split("T")[0]}
