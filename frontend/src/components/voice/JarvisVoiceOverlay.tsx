@@ -204,11 +204,10 @@ export function JarvisVoiceOverlay({
         ctx.stroke();
       }
 
-      // Normal speaking volume averages between 10 and 120. We scale it smoothly to a multiplier.
-      // If silent (volumeRef.current is 0), we use 0.08 to show an elegant, thin, siri-like resting line.
-      // If active, it scales naturally up to 2.5x to represent voice peaks dynamically.
+      // Smooth logarithmic scale matching human decibel perception.
+      // Capped strictly at 1.1x so that wave peaks stay safely and elegantly within container bounds.
       const volumeFactor = state === "listening" || state === "speaking"
-        ? Math.max(0.08, Math.min(2.5, volumeRef.current / 38))
+        ? Math.max(0.08, Math.min(1.1, Math.log10(1 + volumeRef.current) / 1.8))
         : 1.0;
 
       // Draw multi-layered sine waves
