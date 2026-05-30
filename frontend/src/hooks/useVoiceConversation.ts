@@ -128,6 +128,7 @@ export function useVoiceConversation(
   const playFarewellAndExitRef = useRef<() => void>(() => {});
   const greetingAudioCtxRef = useRef<AudioContext | null>(null);
   const greetingSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const localSpeakingAnalyserRef = useRef<AnalyserNode | null>(null);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -1168,20 +1169,27 @@ export function useVoiceConversation(
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
       greetingAudioCtxRef.current = ctx;
       
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 32;
+      analyser.connect(ctx.destination);
+      localSpeakingAnalyserRef.current = analyser;
+      
       ctx.decodeAudioData(
         buffer,
         (decoded) => {
           if (!isActiveRef.current) {
             ctx.close().catch(() => {});
+            localSpeakingAnalyserRef.current = null;
             return;
           }
           const source = ctx.createBufferSource();
           source.buffer = decoded;
-          source.connect(ctx.destination);
+          source.connect(analyser); // Connect to analyser
           greetingSourceRef.current = source;
           
           source.onended = () => {
             greetingSourceRef.current = null;
+            localSpeakingAnalyserRef.current = null;
             if (greetingAudioCtxRef.current === ctx) {
               greetingAudioCtxRef.current = null;
             }
@@ -1341,14 +1349,20 @@ export function useVoiceConversation(
         ctx.resume().catch(() => {});
       }
       
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 32;
+      analyser.connect(ctx.destination);
+      localSpeakingAnalyserRef.current = analyser;
+      
       ctx.decodeAudioData(
         buffer,
         (decoded) => {
           const source = ctx.createBufferSource();
           source.buffer = decoded;
-          source.connect(ctx.destination);
+          source.connect(analyser); // Connect to analyser
           
           source.onended = () => {
+            localSpeakingAnalyserRef.current = null;
             ctx.close().catch(() => {});
             
             if (breathingTimerRef.current) {
@@ -1368,6 +1382,7 @@ export function useVoiceConversation(
           source.start(0);
         },
         () => {
+          localSpeakingAnalyserRef.current = null;
           ctx.close().catch(() => {});
           isActiveRef.current = false;
           setState("idle");
@@ -1412,8 +1427,14 @@ export function useVoiceConversation(
       if (!active) return;
 
       let vol = 0;
-      if (state === "speaking" && audioQueueRef.current) {
-        vol = audioQueueRef.current.getVolume();
+      if (state === "speaking") {
+        if (audioQueueRef.current && audioQueueRef.current.isPlaying) {
+          vol = audioQueueRef.current.getVolume();
+        } else if (localSpeakingAnalyserRef.current) {
+          const dataArray = new Uint8Array(localSpeakingAnalyserRef.current.frequencyBinCount);
+          localSpeakingAnalyserRef.current.getByteFrequencyData(dataArray);
+          vol = dataArray.reduce((a: number, b: number) => a + b, 0) / dataArray.length;
+        }
       } else if (state === "listening" && micAnalyser && micDataArray) {
         micAnalyser.getByteFrequencyData(micDataArray);
         vol = micDataArray.reduce((a: number, b: number) => a + b, 0) / micDataArray.length;
