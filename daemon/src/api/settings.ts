@@ -1,4 +1,6 @@
 import { Hono } from "hono";
+import fs from "fs";
+import { env } from "../config/env.js";
 import {
   setStorageMode,
   isCloudConfigured,
@@ -16,7 +18,7 @@ import {
 import { switchStorageMode, getCurrentMode } from "../db/factory.js";
 import { getRepositories } from "../db/factory.js";
 import { resetGateway, getModelGateway } from "../model/gateway.js";
-import { DEFAULT_PROFILES, DEFAULT_ROUTING_RULES, PROVIDER_PRESETS } from "@jarvis/model-gateway";
+import { DEFAULT_ROUTING_RULES, PROVIDER_PRESETS } from "@jarvis/model-gateway";
 
 const app = new Hono();
 
@@ -50,6 +52,52 @@ app.put("/storage-mode", async (c) => {
     storageMode: body.mode,
     message: `Storage mode switched to ${body.mode}.`,
   });
+});
+
+// ---- Database Diagnostic Stats ----
+
+app.get("/db-stats", async (c) => {
+  try {
+    const mode = getCurrentMode();
+    let dbSize = "0 KB";
+    let entryCount = { conversations: 0, tasks: 0, articles: 0 };
+    
+    if (mode === "local") {
+      try {
+        const stats = fs.statSync(env.SQLITE_DB_PATH);
+        const sizeInKb = stats.size / 1024;
+        dbSize = sizeInKb > 1024 
+          ? `${(sizeInKb / 1024).toFixed(2)} MB` 
+          : `${sizeInKb.toFixed(2)} KB`;
+      } catch (err) {
+        dbSize = "未就绪 (未创建)";
+      }
+    } else {
+      dbSize = "云端托管";
+    }
+
+    try {
+      const repos = getRepositories();
+      const conversations = await repos.conversations.list();
+      entryCount.conversations = conversations.length;
+      
+      const tasks = await repos.tasks.query();
+      entryCount.tasks = tasks.length;
+      
+      const reading = await repos.articles.list();
+      entryCount.articles = reading.length;
+    } catch (e) {
+      console.warn("Failed to get DB records counts:", e);
+    }
+
+    return c.json({
+      success: true,
+      dbSize,
+      entryCount,
+    });
+  } catch (err) {
+    return c.json({ error: String(err) }, 500);
+  }
 });
 
 // ---- Provider Helpers ----
@@ -219,6 +267,49 @@ app.post("/providers/:id/discover", async (c) => {
   }
 });
 
+// ---- Provider Connectivity Test ----
+
+app.post("/providers/:id/test", async (c) => {
+  const id = c.req.param("id");
+  const stored = getProviders().find((p) => p.id === id);
+
+  if (!stored) {
+    return c.json({ error: `Provider "${id}" not found.` }, 404);
+  }
+
+  const startTime = Date.now();
+  try {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (stored.apiKey && stored.apiKey !== "ollama" && !isMaskedKey(stored.apiKey)) {
+      headers["Authorization"] = `Bearer ${stored.apiKey}`;
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000); // 6s timeout
+
+    const resp = await fetch(`${stored.baseURL}/models`, {
+      headers,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    const latencyMs = Date.now() - startTime;
+
+    if (resp.status === 401 || resp.status === 403) {
+      return c.json({ success: false, error: "API Key 校验失败 (401 Unauthorized)", latencyMs });
+    }
+
+    if (!resp.ok) {
+      return c.json({ success: false, error: `服务器返回异常: ${resp.status} ${resp.statusText}`, latencyMs });
+    }
+
+    return c.json({ success: true, latencyMs });
+  } catch (e) {
+    const latencyMs = Date.now() - startTime;
+    return c.json({ success: false, error: `连接超时或 URL 错误: ${String(e)}`, latencyMs });
+  }
+});
+
 // ---- Legacy Provider Credentials (backward compat) ----
 
 app.get("/providers/legacy", (c) => {
@@ -297,8 +388,8 @@ app.put("/active-model", async (c) => {
   const profile = gateway.getProfile(body.modelId);
   if (!profile) {
     const repos = getRepositories();
-    const dbProfiles = (repos.modelProfiles as { getAll: () => unknown[] }).getAll();
-    const found = dbProfiles.find((p: unknown) => (p as { id: string }).id === body.modelId);
+    const dbProfiles = await repos.modelProfiles.getAll();
+    const found = dbProfiles.find((p) => p.id === body.modelId);
     if (!found) {
       return c.json({ error: `Model profile not found: ${body.modelId}` }, 400);
     }
@@ -342,7 +433,7 @@ app.post("/model-profiles", async (c) => {
 app.delete("/model-profiles/:id", async (c) => {
   const id = c.req.param("id");
   const repos = getRepositories();
-  const deleted = (repos.modelProfiles as { delete: (id: string) => boolean }).delete(id);
+  const deleted = await repos.modelProfiles.delete(id);
 
   if (!deleted) {
     return c.json({ error: "Profile not found" }, 404);

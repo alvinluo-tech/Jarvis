@@ -18,8 +18,9 @@ export function resetGateway(): void {
 function getDbProfiles(): ModelProfile[] | null {
   try {
     const repos = getRepositories();
-    const rows = (repos.modelProfiles as { getAll: () => unknown[] }).getAll();
+    const rows = (repos.modelProfiles as unknown as { getAll: () => unknown[] }).getAll();
     if (!Array.isArray(rows) || rows.length === 0) return null;
+
 
     return rows.map((row: unknown) => {
       const r = row as {
@@ -135,7 +136,7 @@ export function getModelGateway(): ModelGateway {
 
   gateway = new ModelGateway({
     defaultModelId: activeModelId,
-    routingRules,
+    routingRules: routingRules as any,
     providers,
     profiles,
   });

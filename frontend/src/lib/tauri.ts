@@ -204,6 +204,21 @@ export async function updateStorageMode(mode: string): Promise<{
   return invoke("update_storage_mode", { mode });
 }
 
+export interface DbStats {
+  success: boolean;
+  dbSize: string;
+  entryCount: {
+    conversations: number;
+    tasks: number;
+    articles: number;
+  };
+}
+
+export async function getDbStats(): Promise<DbStats> {
+  return invoke("get_db_stats");
+}
+
+
 // ---- Voice ----
 
 export interface VoiceStatus {
@@ -399,6 +414,10 @@ export async function removeProvider(id: string): Promise<{ success: boolean }> 
 
 export async function discoverModels(providerId: string): Promise<{ models: { id: string; name: string }[] }> {
   return invoke("discover_models", { providerId });
+}
+
+export async function testProviderConnection(providerId: string): Promise<{ success: boolean; latencyMs?: number; error?: string }> {
+  return invoke("test_provider_connection", { providerId });
 }
 
 // ---- Routing Rules ----

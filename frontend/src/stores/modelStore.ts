@@ -13,6 +13,7 @@ import {
   addProvider as tauriAddProvider,
   removeProvider as tauriRemoveProvider,
   discoverModels as tauriDiscoverModels,
+  testProviderConnection as tauriTestProviderConnection,
   type ModelProfile,
   type ProviderCredentialView,
   type RoutingRule,
@@ -46,6 +47,7 @@ interface ModelState {
   updateProvider: (id: string, config: { apiKey?: string; baseURL?: string }) => Promise<void>;
   removeProvider: (id: string) => Promise<void>;
   discoverModels: (providerId: string) => Promise<{ id: string; name: string }[]>;
+  testProvider: (providerId: string) => Promise<{ success: boolean; latencyMs?: number; error?: string }>;
   updateRoutingRules: (rules: RoutingRule[]) => Promise<void>;
   setActiveModel: (modelId: string) => Promise<void>;
   upsertProfile: (profile: {
@@ -188,6 +190,14 @@ export const useModelStore = create<ModelState>((set, get) => ({
     } catch (e) {
       set({ error: String(e) });
       return [];
+    }
+  },
+
+  testProvider: async (providerId) => {
+    try {
+      return await tauriTestProviderConnection(providerId);
+    } catch (e) {
+      return { success: false, error: String(e) };
     }
   },
 

@@ -14,6 +14,8 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 
 interface MCPSettingsProps {
@@ -35,12 +37,14 @@ export function MCPSettings({ className }: MCPSettingsProps) {
   const { modelProfiles, fetchAll: fetchModels } = useModelStore();
 
   const [showAddForm, setShowAddForm] = useState(false);
+  const [expandedServerId, setExpandedServerId] = useState<string | null>(null);
   const [newServer, setNewServer] = useState({
     id: "",
     name: "",
     transport: "http" as "http" | "stdio" | "sse",
     url: "",
   });
+
 
   useEffect(() => {
     fetchServers();
@@ -245,6 +249,29 @@ export function MCPSettings({ className }: MCPSettingsProps) {
                         {server.prompts.length} 提示词
                       </span>
                     </div>
+
+                    {server.status === "connected" && server.tools.length > 0 && (
+                      <button
+                        onClick={() =>
+                          setExpandedServerId(
+                            expandedServerId === server.config.id ? null : server.config.id
+                          )
+                        }
+                        className="flex items-center gap-1 mt-3 text-xs text-primary hover:underline transition-all"
+                      >
+                        {expandedServerId === server.config.id ? (
+                          <>
+                            <ChevronUp className="h-3.5 w-3.5" />
+                            收起工具详情
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="h-3.5 w-3.5" />
+                            查看工具列表 ({server.tools.length})
+                          </>
+                        )}
+                      </button>
+                    )}
                   </div>
                 </div>
                 <button
@@ -255,6 +282,71 @@ export function MCPSettings({ className }: MCPSettingsProps) {
                   <Unplug className="h-4 w-4" />
                 </button>
               </div>
+
+              {expandedServerId === server.config.id && server.status === "connected" && (
+                <div className="mt-4 pt-3 border-t border-border/40 space-y-3">
+                  <h5 className="text-xs font-semibold text-foreground flex items-center gap-1">
+                    <Wrench className="h-3 w-3 text-primary" /> 注册的工具详情:
+                  </h5>
+                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                    {(() => {
+                      const serverTools = _tools.filter(
+                        (t) => t.source === "mcp" && t.appId === server.config.id
+                      );
+                      if (serverTools.length === 0) {
+                        return (
+                          <div className="text-xs text-muted-foreground italic pl-2">
+                            正在加载或未找到详细工具定义，基础列表：
+                            <ul className="list-disc pl-4 mt-1.5 not-italic space-y-1">
+                              {server.tools.map((t) => (
+                                <li key={t.name}>
+                                  <span className="font-mono font-semibold text-foreground">{t.name}</span>
+                                  {t.description && <span className="text-muted-foreground"> - {t.description}</span>}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        );
+                      }
+                      return serverTools.map((tool) => (
+                        <div
+                          key={tool.id}
+                          className="p-2.5 rounded bg-muted/40 border border-border/60 text-xs space-y-1.5"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-mono font-semibold text-foreground">{tool.name}</span>
+                            <div className="flex gap-1">
+                              {tool.requiresConfirmation && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 font-medium border border-amber-500/10">
+                                  需确认
+                                </span>
+                              )}
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium border ${
+                                tool.risk === "low"
+                                  ? "bg-green-500/10 text-green-600 border-green-500/10"
+                                  : tool.risk === "medium"
+                                  ? "bg-amber-500/10 text-amber-600 border-amber-500/10"
+                                  : "bg-red-500/10 text-red-600 border-red-500/10"
+                              }`}>
+                                风险: {tool.risk}
+                              </span>
+                            </div>
+                          </div>
+                          {tool.description && (
+                            <p className="text-muted-foreground text-[11px] leading-relaxed">{tool.description}</p>
+                          )}
+                          {tool.inputSchema && Object.keys(tool.inputSchema).length > 0 && (
+                            <div className="bg-muted/75 p-2 rounded border border-border/30 mt-1 font-mono text-[10px] max-h-32 overflow-y-auto text-muted-foreground leading-relaxed">
+                              <span className="text-foreground/75 font-semibold block mb-1">参数 Schema:</span>
+                              <pre className="whitespace-pre-wrap">{JSON.stringify(tool.inputSchema, null, 2)}</pre>
+                            </div>
+                          )}
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>

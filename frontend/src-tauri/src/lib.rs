@@ -434,6 +434,12 @@ async fn update_storage_mode(mode: String) -> Result<serde_json::Value, String> 
     daemon_put("/api/settings/storage-mode", serde_json::json!({ "mode": mode })).await
 }
 
+#[tauri::command]
+async fn get_db_stats() -> Result<serde_json::Value, String> {
+    daemon_get("/api/settings/db-stats").await
+}
+
+
 async fn daemon_put<T: for<'de> Deserialize<'de>>(path: &str, body: serde_json::Value) -> Result<T, String> {
     let client = reqwest::Client::new();
     let url = format!("{}{}", get_daemon_url().await, path);
@@ -625,6 +631,11 @@ async fn discover_models(provider_id: String) -> Result<serde_json::Value, Strin
     daemon_post(&format!("/api/settings/providers/{}/discover", provider_id), serde_json::json!({})).await
 }
 
+#[tauri::command]
+async fn test_provider_connection(provider_id: String) -> Result<serde_json::Value, String> {
+    daemon_post(&format!("/api/settings/providers/{}/test", provider_id), serde_json::json!({})).await
+}
+
 // ---- Routing Rules Commands ----
 
 #[tauri::command]
@@ -690,6 +701,7 @@ pub fn run() {
             get_weekly_stats,
             get_settings,
             update_storage_mode,
+            get_db_stats,
             get_voice_status,
             get_daemon_url_command,
             list_mcp_servers,
@@ -708,6 +720,7 @@ pub fn run() {
             add_provider,
             remove_provider,
             discover_models,
+            test_provider_connection,
             get_routing_rules,
             update_routing_rules,
             get_active_model,

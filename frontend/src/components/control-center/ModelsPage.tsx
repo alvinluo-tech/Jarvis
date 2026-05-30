@@ -13,6 +13,9 @@ import {
   ChevronDown,
   ChevronUp,
   Loader2,
+  Activity,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 import { useModelStore, type ProviderEntry } from "@/stores/modelStore";
 import type { RoutingRule, ProviderPreset } from "@/lib/tauri";
@@ -101,13 +104,15 @@ function ProviderGallery({
   presets: ProviderPreset[];
   isLoading: boolean;
 }) {
-  const { addProvider, addCustomProvider, updateProvider, removeProvider, discoverModels } = useModelStore();
+  const { addProvider, addCustomProvider, updateProvider, removeProvider, discoverModels, testProvider } = useModelStore();
   const [showAdd, setShowAdd] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editKey, setEditKey] = useState("");
   const [editURL, setEditURL] = useState("");
   const [discoveredModels, setDiscoveredModels] = useState<Record<string, { id: string; name: string }[]>>({});
   const [discovering, setDiscovering] = useState<string | null>(null);
+  const [testResults, setTestResults] = useState<Record<string, { success: boolean; latencyMs?: number; error?: string }>>({});
+  const [testingId, setTestingId] = useState<string | null>(null);
   const [customId, setCustomId] = useState("");
   const [customName, setCustomName] = useState("");
   const [customURL, setCustomURL] = useState("");
@@ -153,6 +158,13 @@ function ProviderGallery({
     const models = await discoverModels(id);
     setDiscoveredModels((prev) => ({ ...prev, [id]: models }));
     setDiscovering(null);
+  };
+
+  const handleTestConnection = async (id: string) => {
+    setTestingId(id);
+    const res = await testProvider(id);
+    setTestResults((prev) => ({ ...prev, [id]: res }));
+    setTestingId(null);
   };
 
   return (
@@ -281,6 +293,20 @@ function ProviderGallery({
                   <Button
                     variant="outline"
                     size="sm"
+                    onClick={() => handleTestConnection(provider.id)}
+                    disabled={testingId === provider.id}
+                    className="flex-1 text-xs gap-1"
+                  >
+                    {testingId === provider.id ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Activity className="h-3 w-3" />
+                    )}
+                    测试连接
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => handleDiscover(provider.id)}
                     disabled={discovering === provider.id}
                     className="flex-1 text-xs gap-1"
@@ -296,11 +322,38 @@ function ProviderGallery({
                     variant="ghost"
                     size="sm"
                     onClick={() => removeProvider(provider.id)}
-                    className="text-xs text-destructive hover:text-destructive"
+                    className="text-xs text-destructive hover:text-destructive px-2"
                   >
                     <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
+
+                {/* Connection Test Result */}
+                {(() => {
+                  const result = testResults[provider.id];
+                  if (!result) return null;
+                  return (
+                    <div className={`p-2 rounded-md border text-xs flex items-center gap-1.5 mt-2 ${
+                      result.success
+                        ? "bg-green-500/10 border-green-500/20 text-green-600 dark:text-green-400"
+                        : "bg-red-500/10 border-red-500/20 text-red-500 dark:text-red-400"
+                    }`}>
+                      {result.success ? (
+                        <>
+                          <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                          <span>连接正常 (延迟: {result.latencyMs}ms)</span>
+                        </>
+                      ) : (
+                        <>
+                          <AlertCircle className="h-3.5 w-3.5 text-red-500" />
+                          <span className="truncate flex-1" title={result.error}>
+                            连接失败: {result.error}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  );
+                })()}
                 {/* Discovered Models */}
                 {(() => {
                   const models = discoveredModels[provider.id];
