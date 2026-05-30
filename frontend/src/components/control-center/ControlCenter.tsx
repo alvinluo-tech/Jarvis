@@ -7,7 +7,9 @@ import {
   Brain,
   Plug,
   Wrench,
+  Shield,
   Mic,
+  Activity,
   Database,
 } from "lucide-react";
 import { OverviewPage } from "./OverviewPage";
@@ -15,7 +17,9 @@ import { SystemPage } from "./SystemPage";
 import { ModelsPage } from "./ModelsPage";
 import { AppsPage } from "./AppsPage";
 import { ToolsPage } from "./ToolsPage";
+import { PermissionPage } from "./PermissionPage";
 import { VoicePage } from "./VoicePage";
+import { DaemonPage } from "./DaemonPage";
 import { DbPage } from "./DbPage";
 
 export type ControlPage =
@@ -24,7 +28,9 @@ export type ControlPage =
   | "models"
   | "apps"
   | "tools"
+  | "permission"
   | "voice"
+  | "daemon"
   | "db";
 
 interface ControlCenterProps {
@@ -38,7 +44,9 @@ const navItems: { id: ControlPage; label: string; icon: typeof LayoutDashboard }
   { id: "models", label: "模型", icon: Brain },
   { id: "apps", label: "应用 & MCP", icon: Plug },
   { id: "tools", label: "工具", icon: Wrench },
+  { id: "permission", label: "权限", icon: Shield },
   { id: "voice", label: "语音", icon: Mic },
+  { id: "daemon", label: "守护进程", icon: Activity },
   { id: "db", label: "数据管理", icon: Database },
 ];
 
@@ -48,7 +56,9 @@ const pages: Record<ControlPage, React.ComponentType> = {
   models: ModelsPage,
   apps: AppsPage,
   tools: ToolsPage,
+  permission: PermissionPage,
   voice: VoicePage,
+  daemon: DaemonPage,
   db: DbPage,
 };
 
