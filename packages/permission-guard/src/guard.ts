@@ -294,13 +294,8 @@ export class PermissionGuard {
   }
 
   getPendingConfirmations(): PendingConfirmation[] {
-    return Array.from(this.pendingConfirmations.values()).map((entry) => ({
-      id: entry.id,
-      action: entry.action,
-      message: entry.message,
-      requestedAt: entry.requestedAt,
-      expiresAt: entry.expiresAt,
-    }));
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    return Array.from(this.pendingConfirmations.values()).map(({ resolve, ...rest }) => rest);
   }
 
   cancelConfirmation(confirmationId: string): boolean {
